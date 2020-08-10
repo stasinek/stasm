@@ -1,0 +1,118 @@
+# stasm
+
+Hi, my name is Stanley.
+First of all this are my first steps using GitHub(and Git also), Those are my first steps since many years in C, and also english is not my primary language. 
+So please forgive me if im doing it wrong. Help me if You can and want to.
+
+This repo is mainly working but still alpha version of GCC inline asm volatile("":::) replacement using C preprocessor.
+Replaceent by:
+```
+ __stasm(lot of options and clobber list,
+		 code(word where code starts),
+		 then literal code without ""
+		 )
+```
+Thats all. 
+As You can see, simplest form of inline assembly could be:
+```
+__stasm(push eax; xor eax,eax; ret;)
+``` 
+Or if you will debug it:
+```
+__stasm(push eax\n and so on...)
+```
+
+With __stasm You can simple copy-paste from Visual Studio asm {}  block. It also simplify work a little using options. 
+The big options are: 
+```
+x86, eax, ebx, ecx, edx, esi, edi, x87, x64,x64r89, x64rxx, mmx, sse, sse2, sse3, sse4, avx, aes
+```
+You could write one of them or all of them to some magic happen.
+If you do this, preproccessor will warn you to add -mmx, -msse option into GCC commmand line.
+The preprocessor would include headers with data types(mmx,sse), it will add clobbers into asm() clobber list;
+The option is to add individial registers eax,ebx etc..  or all of particular registers group:
+x86 means all x86 registers, x64r89 means only r8+r9, x64rxx means all r10-r15.
+Those simple options affect only clobber list passed into gcc asm(); passing individual or all registers.
+If you don't want to affect GCC but must save them before use you must add magical word "save":
+"save,register_name" and then macro would generate "push register" "pop register" pair before and after your code block. 
+This would not break GCC optimisation for local variables but simple push them and pop from stack when your code is done.
+If you want fnsave,fxsave,xsave simply save,x87,save,sse,save,avx and stasm would do it for you.
+There is also magical option "dim", then after comma you write "+g", global variable name then comma again so instead of: unnamed variable %1, you could write "mov you_named_in_C,eax;
+Extended syntax using "dim's" is not working for two or more variables.
+This need to be fixed.
+
+#Due the GCC bugs...
+`
+Again invalidated by bugzilla guys macro is not as useful and intuitive as could be.
+[Ticket number: 65897](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65897)
+[Ticket number: 65898](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65898)
+`
+Dim has no chance working well with GCC without -masm=intel in compiler command line options.
+For now it is very cool in Clang inline asm() and it was working well without problems...until I broke something.
+For working in GCC i have created global variables and Semaphores(mutexes) as temporary feature.
+And so You should not use dim's but static "stacks" named:
+s_x86,s_x87 etc. in size of 1 cache line 64 bytes.
+`
+Anyway, this macro helped me to switch from Borland C++ 6 inline asm {} into QT Creator + MinGW
+Mutexes/semaphores(counting from MAX_PARARELL to 0) were created for multithread safety.
+You could use them in up to MAX_PARARELL=12 threads(recrusion) because of semaphore/mutex switcher.
+Global variables are for easy exchange data. 
+Anybody should avoid globals im working to avoid them but bugzilla is not helping me so i must for now.
+This is not good idea(makes asm opposite to program speedup) but it works.
+This is not way it should be but it's very easy create inline assembly for people who used to Microsoft/Borland asm {}
+For me it was only way to start working with code from many many years ago.
+`
+
+How it works? Instead of writing:
+```
+ asm("blabla %bla,bla\n\
+						someother bla,bla\n
+						" : input : output or whatever : registers used : goto labels);
+```
+You could easly write(for example):
+```
+	s_x86[0] = 13; // input data 
+	__stasm(x86,code,
+		mov esi, s_x86;
+		mov eax,[esi];
+		imul eax,3;
+		mov edi,s_x86;
+		inc edi;
+		mob [edi],ecx;
+	);
+```
+	And then int variable = s_x86[1];
+	You could say, it's dumb, silly, useless.. 
+	GCC has such great feature "+r", there is not many changes except "", 
+	In GCC code could be only 1 line: imul %1,3; GCC would create mov eax,[ebs-8]; or whatever.. 
+	Yeah You right, You got me, but for me it was the only way to switch from something like that:
+```
+	int __stdcall somefunc(int variable){
+		asm {
+		mov eax,variable;
+		imul eax,3;
+		mov variable,eax;
+		}
+		return variable;
+	}
+```
+	Into previously presented, by just copy-paste blocks of asm code and adapt into gcc much more easly.
+	You may say, should copy them into ".s"" files, "offline" asembly or into NASM, YASM,FASM
+	Of course. So I did it in QT Creator by modifying makefile and adding compiler for .asm
+	And then realized that GAS is better and created some .s files, and then realised... i don't want to learn linker nameing convention.
+	I don't want to change whole C code into asm, then line by line when i switch from 32bit version of apps change function prequels.
+	Let C compiler do this for me. 
+	So decided to do stasm macro. Yust for fun and learn C preprocessor features.
+	When i done it, I have decided that I will never, ever learn GCC dumb inline assembly. Promise!
+	Clang has experimental support for asm {} so.. there is a hope i wont be forced to it anymore.
+	GCC asembly has been done wrong. Not for human beings let's forget about. 
+	I know it's "+r","r" faster better.. blabla..
+	But it's not intuitive. I like WinAVR, i want to make asembly for ARM instead of GCC used to IAR Embadded.
+	BCC32 is very old, Pelles C is only C compiler.. Clang is not working with Qt Creator so..  
+	
+##	Here it is, as it is.
+	Maybe you could make it better, so give me a sign.
+	I don't know what im done wrong with dim's - why it's not working. 
+	It worked but suddenly i have make some mistake?
+	Help me if you can.
+	Cheers.

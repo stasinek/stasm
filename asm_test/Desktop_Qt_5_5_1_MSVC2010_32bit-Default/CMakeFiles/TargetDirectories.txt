@@ -1,0 +1,1 @@
+C:/SRC/X86_LIBRARIES/STK/stasm/asm_test/Desktop_Qt_5_5_1_MSVC2010_32bit-Default/CMakeFiles/asm_test.dir

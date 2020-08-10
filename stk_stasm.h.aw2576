@@ -1,0 +1,919 @@
+//---------------------------------------------------------------------------
+#ifndef tsoft_stasm_h
+#define tsoft_stasm_h
+#pragma once
+//---------------------------------------------------------------------------
+#include "./../tsoft_main.h"
+//---------------------------------------------------------------------------
+#if defined(__BORLANDC__)
+
+#define __stasm(val) asm { val }
+#ifndef __volatile__
+#define __volatile__(var) asm { var }
+#endif
+#ifndef __asm__
+#define __asm__
+#endif
+#ifndef   asm
+#define   asm(var)
+#endif
+#define __attribute__(var)
+
+#endif
+
+/* Microsoft C/C++-compatible compiler */
+#if defined(_MSC_VER)
+
+#define __stasm(val) asm { val }
+#ifndef __volatile__
+#define __volatile__(var) asm { var }
+#endif
+#ifndef __asm__
+#define __asm__
+#endif
+#ifndef   asm
+#define   asm(var)
+#endif
+#define __attribute__(var)
+#include <intrin.h>
+#endif
+
+#if defined (__GNUC__) || defined(__CLANG__) || defined(__clang__)
+
+extern "C" int __stdcall _asm(const char *, ...);
+
+#if defined(__x86_64__)
+	  /* GCC-compatible compiler, targeting x86/x86-64 */
+#endif
+#if defined(__ARM_NEON__)
+	  /* GCC-compatible compiler, targeting ARM with NEON */
+	  #include <arm_neon.h>
+#endif
+#if defined(__IWMMXT__)
+	  /* GCC-compatible compiler, targeting ARM with WMMX */
+	  #include <mmintrin.h>
+#endif
+#if defined(__xlC__) && (defined(__VEC__) || defined(__ALTIVEC__))
+	  /* XLC or GCC-compatible compiler, targeting PowerPC with VMX/VSX */
+	  #include <altivec.h>
+#endif
+#if defined(__SPE__)
+	  /* GCC-compatible compiler, targeting PowerPC with SPE */
+	  #include <spe.h>
+#endif
+
+#define __STASM_CPU_CACHE_LINE_SIZE 64
+#define __STASM_INLINE_SYNTAX	"\n.intel_syntax noprefix\n"
+#define __STASM_MAX_PARARELL 12
+#define __STASM_STACK_SIZE 8
+// should be big enought that one each fits separate cache lines for it's own CPU core!
+
+#ifdef  __INLINE_INTEL__
+#define __GCC_INLINE_SYNTAX		"\n.intel_syntax noprefix\n"
+#else
+#define __GCC_INLINE_SYNTAX		"\n.att_syntax\n"
+#endif
+//---------------------------------------------------------------------------
+#pragma pack(push, 1)
+
+#define __stasm_FNSAVE_x87_template						\
+uint16_t FCW; /* Control Word */						\
+uint16_t reserved1;										\
+uint16_t FSW; /* Status Word */							\
+uint16_t reserved2;										\
+uint16_t FTW; /* TAG Word */							\
+uint16_t reserved3;										\
+union {													\
+/*64 BIT */												\
+	struct {											\
+	uint64_t RIP; /* Instruction Pointer */				\
+	uint64_t RDP; /* Data Pointer */					\
+	};													\
+/*32 BIT */												\
+	struct {											\
+	uint32_t FIP; /* IP Offset */						\
+	uint16_t FCS; /* IP Selector */						\
+	uint16_t FOP; /* Last Opcode */						\
+	uint32_t FDP; /* Operand Offset */					\
+	uint16_t FDS; /* Operand Selector */				\
+	};													\
+};
+extern struct __stasm_FNSAVE_struct {
+__stasm_FNSAVE_x87_template
+struct __STX_MMX {
+	uint64_t VAL;
+	uint16_t EXP;
+} ST0,ST1,ST2,ST3,ST4,ST5,ST6,ST7;
+} __attribute__((packed,aligned (16))) mfnsaved[__STASM_MAX_PARARELL+1];
+
+#define __stasm_FXSAVE_SSE_template						\
+uint16_t FCW; /* Control Word */						\
+uint16_t FSW; /* Status Word */							\
+uint16_t FTW; /* TAG Word */							\
+uint16_t FOP; /* Last Opcode */							\
+union {													\
+/*64 BIT */												\
+	struct {											\
+	uint64_t RIP; /* Instruction Pointer */				\
+	uint64_t RDP; /* Data Pointer */					\
+	};													\
+/*32 BIT */												\
+	struct {											\
+	uint32_t FIP; /* IP Offset */						\
+	uint16_t FCS; /* IP Selector */						\
+	uint16_t reserved1;									\
+	uint32_t FDP; /* Operand Offset */					\
+	uint16_t FDS; /* Operand Selector */				\
+	};													\
+};														\
+uint32_t	MXCR; /* SSE status */						\
+uint32_t	MXCR_MASK;									\
+struct __STX_MMX {										\
+	uint64_t VAL;										\
+	uint16_t EXP;										\
+	uint16_t reserved2[3]; /* no PAD in fsave */ 		\
+} ST0,ST1,ST2,ST3,ST4,ST5,ST6,ST7;						\
+struct __XMM {											\
+union {													\
+	uint8_t  B[16]; /* perfect for ASCII */				\
+	uint16_t W[8]; /* UTF16 */							\
+	uint32_t I[4]; float F[4]; /* 3D Vector */			\
+	uint64_t Q[2]; /* 2 MMX */							\
+	double  D[2];										\
+};														\
+} XMM0,XMM1,XMM2,XMM3,XMM4,XMM5,XMM6,XMM7				\
+ ,XMM8,XMM9,XMM10,XMM11,XMM12,XMM13,XMM14,XMM15;		\
+uint32_t reserved3[(464 - 416) / sizeof(uint32_t)];  	\
+uint32_t user[(512 - 464) / sizeof(uint32_t)];
+
+extern struct __stasm_FXSAVE_struct {
+__stasm_FXSAVE_SSE_template
+} __attribute__((packed,aligned (16)))  mfxsaved[__STASM_MAX_PARARELL+1];
+//---------------------------------------------------------------------------
+
+extern struct __stasm_XSAVE_struct {
+__stasm_FXSAVE_SSE_template
+union {
+ uint64_t PAD[64]; /* align 64 */
+ struct {
+	uint64_t XSTATE_BV;
+	uint64_t XSTATE_COMP_BV;
+	uint64_t RESERVED[6];
+	} __attribute__((packed)) HDR;
+};
+struct __YMM {
+union {
+	uint8_t  BYTE[16]; /* perfect for ASCII */
+	uint16_t W[8]; /* UTF16 */
+	uint32_t I[4]; float F[4]; /* 3D Vector */
+	uint64_t Q[2]; /* 2 MMX */
+	double   D[2];
+};
+} YMM0,YMM1,YMM2,YMM3,YMM4,YMM5,YMM6,YMM7,YMM8,YMM9,YMM10,YMM11,YMM12,YMM13,YMM14,YMM15;
+struct __ZMML {
+		uint8_t BYTE[32]; // 256 bit
+	} __attribute__((packed)) ZMML[16];
+struct __ZMMH {
+		uint8_t BYTE[32]; // 256 bit
+	} __attribute__((packed)) ZMMH[16];
+//uint8_t reserved5[8192 - 512 - 64 - 32*32 - 32*32];
+} __attribute__ ((packed, aligned (64))) mxsaved[__STASM_MAX_PARARELL+1];
+//---------------------------------------------------------------------------
+extern size_t __stasm_stack[__STASM_STACK_SIZE] __attribute__ ((aligned (sizeof(size_t))));
+//---------------------------------------------------------------------------
+#pragma pack(pop)
+//---------------------------------------------------------------------------
+#define __TINIT_CLEAR_STACK_TEMPLATE(mode,data)									\
+	for (uint32_t r_##mode = 0;r_##mode <=__STASM_MAX_PARARELL;r_##mode++)		\
+	for (uint32_t c_##mode = 0;c_##mode < __STASM_STACK_SIZE;  c_##mode++)      \
+	m##mode[r##mode][c##mode] = 0;
+
+#define __TINIT_end()
+#define __TINIT_()
+
+#define __STASM_EXTERN_DATA_TEMPLATE(mode,data)									\
+	extern volatile uint32_t	  s_##mode##_max asm("semaphore_"#mode);		\
+	extern data		 (m_##mode)[__STASM_MAX_PARARELL+1][__STASM_STACK_SIZE]     \
+	asm("m_"#mode) __attribute__ ((aligned (sizeof(data))));		\
+	extern data		 *s_##mode asm("s_"#mode);
+
+//__stdcall, __cdecl, __fastcall for naked C functions, the code must be defined before save! block
+// because it also must be placed after load block not before i have added "x" block after "l" and there is place for __stdcall end etc.
+// in sum it's useless functionality, why to use inline asembly? override push ebp; mov ebp,esp; pop ebp mov esp, ebp - whatever...
+// emms could be placed after all, after all pops from "save" option
+// maybe it could be for atomic thread blocker or something? i don't know for now.. i must put in there(intuition?)
+// maybe this is wrong... left that
+// all emms are puted there, maybe they should be puted before fxload, before pop state not after that?
+// it's simpler left it alone rather than add in all modes
+#define __stasm_s_head(what,mode,...) what __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_head(what,mode,...) __stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_head(what,mode,...) __stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_head(what,mode,...) __stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_head(what,mode,...) __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_head(what,mode,...) __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_head(what,mode,...) __stasm_r_##mode(__VA_ARGS__)
+
+#define __stasm_s_back(what,mode,...) __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_back(what,mode,...) __stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_back(what,mode,...) __stasm_l_##mode(__VA_ARGS__)
+//observe that x back must be in reverse order than head (if it is push/pop for stack it must be)
+#define __stasm_x_back(what,mode,...) __stasm_x_##mode(__VA_ARGS__)  what
+#define __stasm_o_back(what,mode,...) __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_back(what,mode,...) __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_back(what,mode,...) __stasm_r_##mode(__VA_ARGS__)
+
+// variable trash is defined only because macro limitation, leaving "," after each end, so i put some trashed text never used as variable
+// it could be used for common, static defined ways for all asm's() blocks, also there is place for static code and vars in there ;)
+#define __stasm_s_code(...)
+#define __stasm_t_code(...) #__VA_ARGS__
+#define __stasm_l_code(...)
+#define __stasm_x_code(...)
+#define __stasm_o_code(...) "=g" (__stasm_stack)
+#define __stasm_i_code(...)  "g" (__stasm_stack)
+#define __stasm_r_code(...) "cc"
+// enable EFLAGS modification ALWAYS! (for safe programming rather super-duper-speed)
+
+#define __stasm_s_dim_i(as,var_name,mode,...) __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_dim_i(as,var_name,mode,...) __stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_dim_i(as,var_name,mode,...) __stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_dim_i(as,var_name,mode,...) __stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_dim_i(as,var_name,mode,...) __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_dim_i(as,var_name,mode,...) [var_name] as (var_name), __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_dim_i(as,var_name,mode,...) __stasm_r_##mode(__VA_ARGS__)
+
+#define __stasm_s_dim_o(as,var_name,mode,...) __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_dim_o(as,var_name,mode,...) __stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_dim_o(as,var_name,mode,...) __stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_dim_o(as,var_name,mode,...) __stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_dim_o(as,var_name,mode,...) [var_name] as (var_name), __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_dim_o(as,var_name,mode,...) __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_dim_o(as,var_name,mode,...) __stasm_r_##mode(__VA_ARGS__)
+
+// specify any named const value(must be #defined so also named):
+#define __stasm_s_dim_c(const_name,mode,...) __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_dim_c(const_name,mode,...) __stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_dim_c(const_name,mode,...) __stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_dim_c(const_name,mode,...) __stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_dim_c(const_name,mode,...) __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_dim_c(const_name,mode,...) [const_name] "n" (const_name), __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_dim_c(const_name,mode,...) __stasm_r_##mode(__VA_ARGS__)
+
+// specify any read-write variable(lvalue) in single definition:
+#define __stasm_s_dim(as,varname,mode,...) __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_dim(as,varname,mode,...) __stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_dim(as,varname,mode,...) __stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_dim(as,varname,mode,...) __stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_dim(as,varname,mode,...) [varname] as (varname), __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_dim(as,varname,mode,...) "0" (varname), __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_dim(as,varname,mode,...) __stasm_r_##mode(__VA_ARGS__)
+
+// "use" is implemented for x86, ARM so you could write eax,ebx,ecx without the word "use" but also implements storage space
+// use word "use" and register name after for unknown register names(for stasm defines), or clobber "memory" etc.
+// on unknown platform(PowerPC, MIPS etc.) "use" could be only way __stasm to access GCC clobbers
+#define __stasm_s_use(r,mode,...) __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_use(r,mode,...) __stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_use(r,mode,...) __stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_use(r,mode,...) __stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_use(r,mode,...) __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_use(r,mode,...) __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_use(r,mode,...) #r, __stasm_r_##mode(__VA_ARGS__)
+
+//save registers ex, on stack, save fpu state, save mmx state and pop it out at end
+// invoke push chosen one by one
+#define __stasm_s_save(what,mode,...) __stasm_save_##what(__VA_ARGS__) "\n" __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_save(what,mode,...) __stasm_t_##mode(__VA_ARGS__)
+// auto invoke same named pop but observe that it must be in reverse order than push
+#define __stasm_l_save(what,mode,...) __stasm_l_##mode(__VA_ARGS__) "\n" __stasm_load_##what(__VA_ARGS__)
+#define __stasm_x_save(what,mode,...) __stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_save(what,mode,...) __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_save(what,mode,...) __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_save(what,mode,...) __stasm_r_##mode(__VA_ARGS__)
+
+//---------------------------------------------------------------------------
+
+#ifdef __ARM__
+// actually not implemented, should i put r0-r7 registers on the stack? ;)
+// or even more?
+#define __stasm_save_arm "push ???\n"
+#define __stasm_load_arm "push ???\n"
+
+__STASM_EXTERN_DATA_TEMPLATE(arm,uint32_t)
+#define __TINIT_ARM(mode,...)													\
+	s_arm_max = __STASM_MAX_PARARELL;											\
+	s_arm = m_arm[s_arm_max];													\
+	__TINITSTACK(arm)															\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_arm(mode,...)													\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_arm(mode,...)													\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_arm(mode,...)													\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_arm(mode,...)													\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_arm(mode,...)													\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_arm(mode,...)													\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_arm(mode,...)													\
+		"r0","r1","r2","r3","r4","r5","r6","r7",								\
+		__stasm_r_##mode(__VA_ARGS__)
+
+#endif
+//---------------------------------------------------------------------------
+#ifdef __i386__
+#define __stasm_save_eax "push eax\n"
+#define __stasm_save_ebx "push ebx\n"
+#define __stasm_save_ecx "push ecx\n"
+#define __stasm_save_edx "push edx\n"
+#define __stasm_save_esi "push esi\n"
+#define __stasm_save_edi "push edi\n"
+#define __stasm_save_x86 __stasm_save_eax\
+						 __stasm_save_ebx\
+						 __stasm_save_ecx\
+						 __stasm_save_edx\
+						 __stasm_save_esi\
+						 __stasm_save_edi
+#define __stasm_save_x87 "fsave _m_fsaved\n"
+#define __stasm_save_rax "push rax\n"
+#define __stasm_save_rbx "push rbx\n"
+#define __stasm_save_rcx "push rcx\n"
+#define __stasm_save_rdx "push rdx\n"
+#define __stasm_save_rsi "push rsi\n"
+#define __stasm_save_rdi "push rdi\n"
+#define __stasm_save_x64r89 "push r8\n push r9\n"
+#define __stasm_save_x64rxx "push r10\n push r11\n push r12\n push r13\n push r14\n push r15\n"
+#define __stasm_save_x64 __stasm_save_rax\
+						 __stasm_save_rbx\
+						 __stasm_save_rcx\
+						 __stasm_save_rdx\
+						 __stasm_save_rsi\
+						 __stasm_save_rdi\
+						 __stasm_save_x64r89 __stasm_save_x64rxx
+#define __stasm_save_mmx "fxsave _m_fxsaved\n"
+#define __stasm_save_sse "fxsave _m_fxsaved\n"
+#define __stasm_save_avx "xsave  _m_axsaved\n"
+
+#define __stasm_load_eax "pop eax\n"
+#define __stasm_load_ebx "pop ebx\n"
+#define __stasm_load_ecx "pop ecx\n"
+#define __stasm_load_edx "pop edx\n"
+#define __stasm_load_esi "pop esi\n"
+#define __stasm_load_edi "pop edi\n"
+#define __stasm_load_x86 __stasm_save_edi\
+						 __stasm_save_esi\
+						 __stasm_save_edx\
+						 __stasm_save_ecx\
+						 __stasm_save_ebx\
+						 __stasm_save_eax
+#define __stasm_load_x87 "frstor _m_fsaved\n"
+#define __stasm_load_rax "pop rax\n"
+#define __stasm_load_rbx "pop rbx\n"
+#define __stasm_load_rcx "pop rcx\n"
+#define __stasm_load_rdx "pop rdx\n"
+#define __stasm_load_rsi "pop rsi\n"
+#define __stasm_load_rdi "pop rdi\n"
+#define __stasm_load_x64r89 "pop r9\n push r8\n"
+#define __stasm_load_x64rxx "pop r15\n push r14\n push r13\n push r12\n push r11\n push r10\n"
+#define __stasm_load_x64 __stasm_save_x64rxx __stasm_save_x64r89\
+						 __stasm_save_rdi\
+						 __stasm_save_rsi\
+						 __stasm_save_rdx\
+						 __stasm_save_rcx\
+						 __stasm_save_rbx\
+						 __stasm_save_rax
+#define __stasm_load_mmx "fxrstor _m_fxsaved\n"
+#define __stasm_load_sse "fxrstor _m_fxsaved\n"
+#define __stasm_load_avx "xrstor  _m_axsaved\n"
+
+//---------------------------------------------------------------------------
+__STASM_EXTERN_DATA_TEMPLATE(x86,uint32_t)
+#define __TINIT_x86(mode,...)													\
+	s_x86_max = __STASM_MAX_PARARELL;											\
+	s_x86 = m_x86[s_x86_max];													\
+	__TINIT_CLEAR_STACK_TEMPLATE(x86,uint32_t)									\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_x86(mode,...)													\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_x86(mode,...)													\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_x86(mode,...)													\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_x86(mode,...)													\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_x86(mode,...)													\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_x86(mode,...)													\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_x86(mode,...)													\
+		"eax", "ebx", "ecx", "edx", "esi", "edi",								\
+		__stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+__STASM_EXTERN_DATA_TEMPLATE(eax,uint32_t)
+#define __TINIT_eax(mode,...)													\
+	s_eax_max = __STASM_MAX_PARARELL;											\
+	s_eax = m_eax[s_eax_max];		 											\
+	__TINIT_CLEAR_STACK_TEMPLATE(eax,__int32)									\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_eax(mode,...)													\
+		 __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_eax(mode,...)													\
+		 __stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_eax(mode,...)													\
+		 __stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_eax(mode,...)													\
+		 __stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_eax(mode,...)													\
+		 __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_eax(mode,...)													\
+		 __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_eax(mode,...)													\
+		"eax",																	\
+		 __stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+__STASM_EXTERN_DATA_TEMPLATE(ebx,uint32_t)
+#define __TINIT_ebx(mode,...)													\
+	s_ebx_max = __STASM_MAX_PARARELL;											\
+	s_ebx = m_ebx[s_ebx_max];				  									\
+	__TINIT_CLEAR_STACK_TEMPLATE_(ebx,__int32)									\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_ebx(mode,...)													\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_ebx(mode,...)													\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_ebx(mode,...)													\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_ebx(mode,...)													\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_ebx(mode,...)													\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_ebx(mode,...)													\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_ebx(mode,...)													\
+		"ebx",																	\
+		__stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+__STASM_EXTERN_DATA_TEMPLATE(ecx,uint32_t)
+#define __TINIT_ecx(mode,...)													\
+	s_ecx_max = __STASM_MAX_PARARELL;											\
+	s_ecx = m_ecx[s_ecx_max];				  									\
+	__TINIT_CLEAR_STACK_TEMPLATE(ecx,__int32)									\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_ecx(mode,...)													\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_ecx(mode,...)													\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_ecx(mode,...)													\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_ecx(mode,...)													\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_ecx(mode,...)													\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_ecx(mode,...)													\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_ecx(mode,...)													\
+		"ecx",																	\
+		__stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+__STASM_EXTERN_DATA_TEMPLATE(edx,uint32_t)
+#define __TINIT_edx(mode,...)													\
+	s_edx_max = __STASM_MAX_PARARELL;											\
+	sedx = m_edx[s_edx_max];													\
+	__TINIT_CLEAR_STACK_TEMPLATE(edx,__int32) 									\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_edx(mode,...)													\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_edx(mode,...)													\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_edx(mode,...)													\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_edx(mode,...)													\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_edx(mode,...)													\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_edx(mode,...)													\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_edx(mode,...)													\
+		"edx",																	\
+		__stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+__STASM_EXTERN_DATA_TEMPLATE(esi,uint32_t)
+#define __TINIT_esi(mode,...)													\
+	s_esi_max = __STASM_MAX_PARARELL;		   									\
+	s_esi = m_esi[s_esi_max];					   								\
+	__TINIT_CLEAR_STACK_TEMPLATE(esi,__int32)									\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_esi(mode,...)													\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_esi(mode,...)													\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_esi(mode,...)													\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_esi(mode,...)													\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_esi(mode,...)													\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_esi(mode,...)													\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_esi(mode,...)													\
+		"esi",																	\
+		__stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+__STASM_EXTERN_DATA_TEMPLATE(edi,uint32_t)
+#define __TINIT_edi(mode,...)													\
+	s_edi_max = __STASM_MAX_PARARELL;											\
+	s_edi = m_edi[semaphore_edi_max];		  									\
+	__TINIT_CLEAR_STACK_TEMPLATE(edi,__int32)									\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_edi(mode,...)													\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_edi(mode,...)													\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_edi(mode,...)													\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_edi(mode,...)													\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_edi(mode,...)													\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_edi(mode,...)													\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_edi(mode,...)													\
+		"edi",																	\
+		__stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+
+__STASM_EXTERN_DATA_TEMPLATE(x87,double)
+#define __TINIT_x87(mode,...)													\
+	s_x87_max = __STASM_MAX_PARARELL;											\
+	s_x87 = m_x87[s_x87_max];													\
+	__TINIT_CLEAR_STACK_TEMPLATE(x87,double)									\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_x87(mode,...)													\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_x87(mode,...)													\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_x87(mode,...)													\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_x87(mode,...)													\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_x87(mode,...)													\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_x87(mode,...)													\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_x87(mode,...)													\
+		"st(1)", "st(2)", "st(3)", "st(4)", "st(5)", "st(6)", "st(7)",			\
+		__stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+// END OF SUBSTANCIAL x86 + x87
+//---------------------------------------------------------------------------
+#ifdef __x86_64__
+#ifndef __STASM_DO_NOT_WARN
+#warning	"Don't forget add to compiler "-m64" for full support of __x86_64__/__stasm::x64/64rx"\
+			"Otherwise lot of data definition warnings would be generated"
+#endif
+__STASM_EXTERN_DATA_TEMPLATE(x64,uint64_t)
+#define __TINIT_x64(mode,...)													\
+	s_x64 = __STASM_MAX_PARARELL;												\
+	s_x64 = m_x64[s_x64_max];				  									\
+	__TINIT_CLEAR_STACK_TEMPLATE(x64,uint64_t)									\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_x64(mode,...)													\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_x64(mode,...)													\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_x64(mode,...)													\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_x64(mode,...)													\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_x64(mode,...)													\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_x64(mode,...)													\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_x64(mode,...)													\
+		"rax", "rbx", "rcx", "rdx", "rsi", "rdi",								\
+		__stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+__STASM_EXTERN_DATA_TEMPLATE(x64r89,uint64_t)
+#define __TINIT_x64r89(mode,...)												\
+	s_x64r89_max = __STASM_MAX_PARARELL;	 								\
+	s_x64r89 = m_x64r89[s_x64r89_max];			 								\
+	__TINIT_CLEAR_STACK_TEMPLATE(x64r89,uint64_t)								\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_x64r89(mode,...)												\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_x64r89(mode,...)												\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_x64r89(mode,...)												\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_x64r89(mode,...)												\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_x64r89(mode,...)												\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_x64r89(mode,...)												\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_x64r89(mode,...)												\
+		"r8lb","r8hb","r8w","r8d","r8",											\
+		"r9lb","r9hb","r9w","r9d","r9",											\
+		__stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+__STASM_EXTERN_DATA_TEMPLATE(x64rxx,uint64_t)
+#define __TINIT_x64rxx(mode,...)												\
+	s_x64rxx_max = __STASM_MAX_PARARELL;										\
+	s_x64rxx = m_x64rx[s_x64xx_max];			   								\
+	__TINIT_CLEAR_STACK_TEMPLATE(x64rxx,uint64_t)								\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_x64rxx(mode,...)												\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_x64rxx(mode,...)												\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_x64rxx(mode,...)												\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_x64rxx(mode,...)												\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_x64rxx(mode,...)												\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_x64rxx(mode,...)												\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_x64rxx(mode,...)												\
+		"r10lb","r10hb","r10w","r10d","r10",									\
+		"r11lb","r11hb","r11w","r11d","r11",									\
+		"r12lb","r12hb","r12w","r12d","r12",									\
+		"r13lb","r13hb","r13w","r13d","r13",									\
+		"r14lb","r14hb","r14w","r14d","r14",									\
+		"r15lb","r15hb","r15w","r15d","r15",									\
+		__stasm_r_##mode(__VA_ARGS__)
+#endif
+//---------------------------------------------------------------------------
+#ifdef __MMX__
+#ifndef __STASM_DO_NOT_WARN
+#warning	"Don't forget add to compiler "-mmmx" for full support of MMX/__stasm::mmx"\
+			"Otherwise lot of data definition warnings would be generated"
+#endif
+#include  <mmintrin.h>
+__STASM_EXTERN_DATA_TEMPLATE(mmx,__m64)
+#define __TINIT_mmx(mode,...)													\
+	s_mmx_max = __STASM_MAX_PARARELL;											\
+	s_mmx = m_mmx[semaphore_mmx_max];											\
+	__TINIT_CLEAR_STACK_TEMPLATE(mmx,__m64)										\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_mmx(mode,...)													\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_mmx(mode,...)													\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_mmx(mode,...)													\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_mmx(mode,...)													\
+		"emms\n"																\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_mmx(mode,...)													\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_mmx(mode,...)													\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_mmx(mode,...)													\
+		"mm0","mm1","mm2","mm3","mm4","mm5","mm6","mm7",						\
+		__stasm_r_##mode(__VA_ARGS__)
+#endif
+//---------------------------------------------------------------------------
+#ifdef __SSE__
+#ifndef __STASM_DO_NOT_WARN
+#warning	"Don't forget add to compiler "-msse" for full support of SSE/__stasm::sse"\
+			"Otherwise lot of data definition warnings would be generated"
+#endif
+#include <xmmintrin.h>
+__STASM_EXTERN_DATA_TEMPLATE(sse,__m128)
+#define __TINIT_sse(mode,...)													\
+	s_sse_max = __STASM_MAX_PARARELL;											\
+	s_sse = m_sse[semaphore_sse_max];											\
+	__TINIT_CLEAR_STACK_TEMPLATE(sse,__m128)									\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_sse(mode,...)													\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_sse(mode,...)													\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_sse(mode,...)													\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_sse(mode,...)													\
+		"emms\n"																\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_sse(mode,...)													\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_sse(mode,...)													\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_sse(mode,...)													\
+		"xmm0","xmm1","xmm2","xmm3","xmm4","xmm5","xmm6","xmm7",				\
+		__stasm_r_##mode(__VA_ARGS__)
+#endif
+//---------------------------------------------------------------------------
+#if defined(__SSE2__)
+#ifndef __STASM_DO_NOT_WARN
+#warning	"Don't forget add to compiler "-msse2" for full support of SSE2/__stasm::sse2"\
+			"Otherwise lot of data definition warnings would be generated"
+#endif
+#include <emmintrin.h>
+__STASM_EXTERN_DATA_TEMPLATE(sse2,__m128d)
+	#define __TINIT_sse2(mode,...)												\
+	s_sse2_max = __STASM_MAX_PARARELL;											\
+	s_sse2 = m_sse2[s_sse2_max];												\
+	__TINIT_CLEAR_STACK_TEMPLATE(sse2,__m128d)									\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_sse2(mode,...)												\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_sse2(mode,...)												\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_sse2(mode,...)												\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_sse2(mode,...)												\
+		"emms\n"																\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_sse2(mode,...)\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_sse2(mode,...)												\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_sse2(mode,...)												\
+		"xmm0","xmm1","xmm2","xmm3","xmm4","xmm5","xmm6","xmm7",				\
+		__stasm_r_##mode(__VA_ARGS__)
+#endif
+
+#if defined(__SSE3__) or defined(__SSEE3__)
+#include <pmmintrin.h>
+#ifdef __SSEE3__
+#include <tmmintrin.h>
+#endif
+__STASM_EXTERN_DATA_TEMPLATE(sse3,__m128i)
+	#define __TINIT_sse3(mode,...)												\
+	s_sse3_max = __STASM_MAX_PARARELL;											\
+	s_sse3 = m_sse3[s_sse3_max];												\
+	__TINIT_CLEAR_STACK_TEMPLATE(sse3,__m128i)									\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_sse3(mode,...)												\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_sse3(mode,...)												\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_sse3(mode,...)												\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_sse3(mode,...)												\
+		"emms\n"																\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_sse3(mode,...)												\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_sse3(mode,...)												\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_sse3(mode,...)												\
+		"xmm0","xmm1","xmm2","xmm3","xmm4","xmm5","xmm6","xmm7",				\
+		__stasm_r_##mode(__VA_ARGS__)
+#endif
+
+#if defined(__SSE4A__) or defined(__SSE41__) or defined(__SSE42__)
+#ifdef __SSE4A__
+#include <ammintrin.h>
+#endif
+#ifdef __SSE41__
+#include <smmintrin.h>
+#endif
+#ifdef __SSE42__
+#include <nmmintrin.h>
+#endif
+__STASM_EXTERN_DATA_TEMPLATE(sse4,__m128i)
+	#define __TINIT_sse4(mode,...)												\
+	s_sse4_max = __STASM_MAX_PARARELL;											\
+	s_sse4 = m_sse4[s_sse4_max];												\
+	__TINIT_CLEAR_STACK_TEMPLATE(sse4,__m128i)									\
+	__TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_sse4(mode,...)												\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_sse4(mode,...)												\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_sse4(mode,...)												\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_sse4(mode,...)												\
+		"emms\n"																\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_sse4(mode,...)												\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_sse4(mode,...)												\
+		__stasm_i_##mode(__VA_ARGS__)
+#if !defined(__x86_64__)
+#define __stasm_r_sse4(mode,...)												\
+		"xmm0","xmm1","xmm2","xmm3","xmm4","xmm5","xmm6","xmm7",				\
+		__stasm_r_##mode(__VA_ARGS__)
+#else
+#define __stasm_r_sse4(mode,...)												\
+		"xmm0","xmm1","xmm2","xmm3","xmm4","xmm5","xmm6","xmm7",				\
+		"xmm8","xmm9","xmm10","xmm11","xmm12","xmm13","xmm14","xmm15",			\
+		__stasm_r_##mode(__VA_ARGS__)
+#endif
+#endif
+//---------------------------------------------------------------------------
+#ifdef __AVX__
+#ifndef __STASM_DO_NOT_WARN
+#warning	"Don't forget add to compiler "-mavx" for full support of AVX/__stasm::avx"\
+			"Otherwise lot of data definition warnings would be generated"
+#endif
+#include <immintrin.h>
+__STASM_EXTERN_DATA_TEMPLATE(avx,__m256)
+#define __TINIT_avx(mode,...)													\
+	s_avx_max = __STASM_MAX_PARARELL;											\
+	s_avx = m_avx[s_avx_max];					  								\
+	__TINIT_CLEAR_STACK_TEMPLATE(avx,__m256)									\
+	__TINIT_##mode(__VA_ARGS__)													\
+#define __stasm_s_avx(mode,...)													\
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_avx(mode,...)													\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_avx(mode,...)													\
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_avx(mode,...)													\
+		"emms\n"																\
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_avx(mode,...)													\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_avx(mode,...)													\
+		__stasm_i_##mode(__VA_ARGS__)
+#if !defined(__x86_64__)
+#define __stasm_r_avx(...)														\
+		"ymm0","ymm1","ymm2","ymm3","ymm4","ymm5","ymm6","ymm7",				\
+		__stasm_r_##mode(__VA_ARGS__)
+#else
+#define __stasm_r_avx(...)														\
+		"ymm0","ymm1","ymm2","ymm3","ymm4","ymm5","ymm6","ymm7",				\
+		"ymm8","ymm9","ymm10","ymm11","ymm12", "ymm13","ymm14","ymm15",			\
+		__stasm_r_##mode(__VA_ARGS__)
+#endif
+#endif
+//---------------------------------------------------------------------------
+#ifdef __AES__
+#ifndef __STASM_DO_NOT_WARN
+#warning	"Don't forget add to compiler "-maes" for full support of AES/__stasm::aes"\
+			"Otherwise lot of data definition warnings would be generated"
+#endif
+#include <wmmintrin.h>
+__STASM_EXTERN_DATA_TEMPLATE(aes,__m256)
+#define __TINIT_aes(mode,...)													\
+	s_aes_max = __STASM_MAX_PARARELL;											\
+	s_aes = m__aes[s_aes_max];					 								\
+	__TINIT_CLEAR_STACK_TEMPLATE(aes,__m256)									\
+	__TINIT_##mode(__VA_ARGS__)													\
+#define __stasm_s_aes(mode,...)
+		__stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_aes(mode,...)													\
+		__stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_aes(mode,...)
+		__stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_aes(mode,...)
+		__stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_aes(mode,...)													\
+		__stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_aes(mode,...)													\
+		__stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_aes(...)														\
+		__stasm_r_##mode(__VA_ARGS__)
+#endif
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+#define __TINIT(mode,...) __TINIT_##mode(__VA_ARGS__)
+#define __TLOCK(mode)															\
+	while (s_##mode##_max==0) ts::time::wait_us(1);		  						\
+	s_##mode =(m##mode[s_##mode##_max--]);
+
+#define __TUNLOCK(mode)															\
+	s_##mode =(m_##mode[++s_##mode##_max]);
+//---------------------------------------------------------------------------
+#define __stasm(mode,...)														\
+	__asm__ __volatile__(														\
+	__STASM_INLINE_SYNTAX														\
+	 __stasm_s_##mode(__VA_ARGS__) "\n" 										\
+	 __stasm_t_##mode(__VA_ARGS__) "\n" 										\
+	 __stasm_l_##mode(__VA_ARGS__) "\n" 										\
+	 __stasm_x_##mode(__VA_ARGS__) "\n" 										\
+	__GCC_INLINE_SYNTAX 														\
+ : 	__stasm_o_##mode(__VA_ARGS__) 												\
+ : 	__stasm_i_##mode(__VA_ARGS__) 												\
+ : 	__stasm_r_##mode(__VA_ARGS__) 												\
+	);
+//---------------------------------------------------------------------------
+#define __stasmex(mode,...)														\
+	__asm__ __volatile__(__STASM_INLINE_SYNTAX 									\
+	__stasm_s_##mode(__VA_ARGS__) "\n" 											\
+	__stasm_t_##mode(__VA_ARGS__) "\n" 											\
+	__stasm_l_##mode(__VA_ARGS__) "\n" 											\
+	__stasm_x_##mode(__VA_ARGS__) "\n" 											\
+	__GCC_INLINE_SYNTAX
+#define __stasmex_i(var)														\
+	: [var]  "r" (&var)
+#define __stasmex_o(var)														\
+	: [var] "=r" (&var)
+#define __stasmex_v(...)														\
+	: __VA_ARGS__
+#define __stasmex_c(...)														\
+	: __VA_ARGS__
+#define __stasmex_auto(mode,...)												\
+	__stasm_r_##mode(__VA_ARGS__)
+#define __stasm_ex_end															\
+	);
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+
