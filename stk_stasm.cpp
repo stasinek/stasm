@@ -3,10 +3,6 @@
 //---------------------------------------------------------------------------
 // Stasm is only for GCC compatible inline asembler
 #if defined( __GNUC__)  | defined(__CLANG__)
-// AMD/Intel 32 or 64 bits
-#if defined(__x86_64__) | defined(__i386__)
-// ^^ We assume x87 is present since 486/Pentium era by default
-#define __X87__
 //---------------------------------------------------------------------------
 // __STASM_DECLARE_SHARE_STACK Template
 //---------------------------------------------------------------------------
@@ -15,21 +11,27 @@
     data_type  __stasm_##mode_name##_stack[__STASM_MAX_PARARELL+1][__STASM_STACK_SIZE] asm("__stasm_"#mode_name"_stack");		\
     data_type *__stasm_##mode_name asm("__stasm_"#mode_name) = (data_type*)(__stasm_##mode_name##_stack[__stasm_##mode_name##_max]);
 //---------------------------------------------------------------------------
-__STASM_DECLARE_SHARE_STACK(x86,uint32_t)
-__STASM_DECLARE_SHARE_STACK(eax,uint32_t)
-__STASM_DECLARE_SHARE_STACK(ebx,uint32_t)
-__STASM_DECLARE_SHARE_STACK(ecx,uint32_t)
-__STASM_DECLARE_SHARE_STACK(edx,uint32_t)
-__STASM_DECLARE_SHARE_STACK(esi,uint32_t)
-__STASM_DECLARE_SHARE_STACK(edi,uint32_t)
-//---------------------------------------------------------------------------
+#if defined(__x86_64__) | defined(__i386__)
+// AMD/Intel 32 or 64 bits
+// ^^ We assume x87 is present since 486/Pentium era by default
+#define __X87__
+    __STASM_DECLARE_SHARE_STACK(x86,uint32_t)
+    __STASM_DECLARE_SHARE_STACK(eax,uint32_t)
+    __STASM_DECLARE_SHARE_STACK(ebx,uint32_t)
+    __STASM_DECLARE_SHARE_STACK(ecx,uint32_t)
+    __STASM_DECLARE_SHARE_STACK(edx,uint32_t)
+    __STASM_DECLARE_SHARE_STACK(esi,uint32_t)
+    __STASM_DECLARE_SHARE_STACK(edi,uint32_t)
 #ifdef __x86_64__
-    __STASM_DECLARE_SHARE_STACK(x86,uint64_t)
+    __STASM_DECLARE_SHARE_STACK(x64,uint64_t)
     __STASM_DECLARE_SHARE_STACK(rax,uint64_t)
     __STASM_DECLARE_SHARE_STACK(rbx,uint64_t)
     __STASM_DECLARE_SHARE_STACK(rcx,uint64_t)
     __STASM_DECLARE_SHARE_STACK(rdx,uint64_t)
-    __STASM_DECLARE_SHARE_STACK(x64r89,uint64_t)
+    __STASM_DECLARE_SHARE_STACK(rsi,uint64_t)
+    __STASM_DECLARE_SHARE_STACK(rdi,uint64_t)
+    __STASM_DECLARE_SHARE_STACK(x64r08,uint64_t)
+    __STASM_DECLARE_SHARE_STACK(x64r09,uint64_t)
     __STASM_DECLARE_SHARE_STACK(x64rxx,uint64_t)
     // TODO: Make sure __SSE__ to be defined if __x86_64__ is present
     // To declare necessary placeholders for FPU/XMM registers push/pop states

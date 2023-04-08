@@ -23,14 +23,18 @@
 // Then nothing bad would happen, and can be even milions of them in pararell but only 32 would start execution at the same time.
 // Sometimes this limit could be even usefull i think? Your fork bomb would not choke OS? :)
 #ifndef     __STASM_MAX_PARARELL
-        #define __STASM_MAX_PARARELL 32
+        #define __STASM_MAX_PARARELL 64
 #endif
 //---------------------------------------------------------------------------
 // TODO: __STASM_STACK_SIZE AUTO determined to be exacly number of MMX,SSE,SSE2,SSE3,SSE4,AVX registers count on processor
 // It means how many registers mine data exchange structure (between GCC and GAS) will fit. Ex. 8 on x86 means 16xEAX's = 64B
 // Or 8xMMX = 64B to be exact one cache line.
 #ifndef     __STASM_STACK_SIZE
-        #define __STASM_STACK_SIZE 8
+#if defined(__x86_64__)
+     #define __STASM_STACK_SIZE  8 //  8x = 8 bytes 64 bit = 64 bytes a cache line on most x86-64 CPU's
+#else 
+     #define __STASM_STACK_SIZE 16 // 16x = 4 bytes 32 bit = 64 bytes a cache line on most CPUs
+#endif
 #endif
 //---------------------------------------------------------------------------
 // Put some warnings to compiler, depending what compiler you use currently. If you use multiple ones, you would be able to detect wherever STASM was/should be called
@@ -678,6 +682,144 @@ __STASM_SHARE_STACK_DEFINE(x87,double)
     #define x64_warned
     #warning        "It seems that your CPU has got 64bit, make sure to add compiler option "-m64" to use 64bit mode"
 #endif
+__STASM_SHARE_STACK_DEFINE(rax,uint64_t)
+#define __TINIT_rax(mode,...)                                                   \
+        __stasm_rax_max = __STASM_MAX_PARARELL;                                     \
+        __stasm_rax = __stasm_rax_stack[__stasm_rax_max];                                           \
+        __STASM_SHARE_STACK_CLEAR(rax,uint64_t)                                 \
+        __TINIT_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+#define __stasm_s_rax(mode,...)                                                 \
+                 __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_rax(mode,...)                                                 \
+                 __stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_rax(mode,...)                                                 \
+                 __stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_rax(mode,...)                                                 \
+                 __stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_rax(mode,...)                                                 \
+                 __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_rax(mode,...)                                                 \
+                 __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_rax(mode,...)                                                 \
+                "rax",                                                          \
+                 __stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+__STASM_SHARE_STACK_DEFINE(rbx,uint64_t)
+#define __TINIT_rbx(mode,...)                                                   \
+        __stasm_rbx_max = __STASM_MAX_PARARELL;                                     \
+        __stasm_rbx = __stasm_rbx_stack[__stasm_rbx_max];                                         \
+        __STASM_SHARE_STACK_CLEAR(rbx,uint64_t)                                 \
+        __TINIT_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+#define __stasm_s_rbx(mode,...)                                                 \
+                __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_rbx(mode,...)                                                 \
+                __stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_rbx(mode,...)                                                 \
+                __stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_rbx(mode,...)                                                 \
+                __stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_rbx(mode,...)                                                 \
+                __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_rbx(mode,...)                                                 \
+                __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_rbx(mode,...)                                                 \
+                "rbx",                                                          \
+                __stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+__STASM_SHARE_STACK_DEFINE(rcx,uint64_t)
+#define __TINIT_rcx(mode,...)                                                   \
+        __stasm_rcx_max = __STASM_MAX_PARARELL;                                     \
+        __stasm_rcx = __stasm_rcx_stack[__stasm_rcx_max];                                         \
+        __STASM_SHARE_STACK_CLEAR(rcx,uint64_t)                                 \
+        __TINIT_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+#define __stasm_s_rcx(mode,...)                                                 \
+                __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_rcx(mode,...)                                                 \
+                __stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_rcx(mode,...)                                                 \
+                __stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_rcx(mode,...)                                                 \
+                __stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_rcx(mode,...)                                                 \
+                __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_rcx(mode,...)                                                 \
+                __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_rcx(mode,...)                                                 \
+                "rcx",                                                          \
+                __stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+__STASM_SHARE_STACK_DEFINE(rdx,uint64_t)
+#define __TINIT_rdx(mode,...)                                                   \
+        __stasm_rdx_max = __STASM_MAX_PARARELL;                                     \
+        __stasm_rdx = __stasm_rdx_stack[__stasm_rdx_max];                                         \
+        __STASM_SHARE_STACK_CLEAR(rdx,uint64_t)                                 \
+        __TINIT_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+#define __stasm_s_rdx(mode,...)                                                 \
+                __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_rdx(mode,...)                                                 \
+                __stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_rdx(mode,...)                                                 \
+                __stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_rdx(mode,...)                                                 \
+                __stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_rdx(mode,...)                                                 \
+                __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_rdx(mode,...)                                                 \
+                __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_rdx(mode,...)                                                 \
+                "rdx",                                                          \
+                __stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+__STASM_SHARE_STACK_DEFINE(rsi,uint64_t)
+//---------------------------------------------------------------------------
+#define __TINIT_rsi(mode,...)                                                   \
+        __stasm_rsi_max = __STASM_MAX_PARARELL;                                     \
+        __stasm_rsi = __stasm_rsi_stack[__stasm_rsi_max];                                           \
+        __STASM_SHARE_STACK_CLEAR(rsi,uint64_t)                                 \
+        __TINIT_##mode(__VA_ARGS__)
+#define __stasm_s_rsi(mode,...)                                                 \
+                __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_rsi(mode,...)                                                 \
+                __stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_rsi(mode,...)                                                 \
+                __stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_rsi(mode,...)                                                 \
+                __stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_rsi(mode,...)                                                 \
+                __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_rsi(mode,...)                                                 \
+                __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_rsi(mode,...)                                                 \
+                "rsi",                                                          \
+                __stasm_r_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+__STASM_SHARE_STACK_DEFINE(rdi,uint64_t)
+//---------------------------------------------------------------------------
+#define __TINIT_rdi(mode,...)                                                   \
+        __stasm_rdi_max = __STASM_MAX_PARARELL;                                     \
+        __stasm_rdi = __stasm_rdi_stack[__stasm_rdi_max];                                         \
+        __STASM_SHARE_STACK_CLEAR(rdi,uint64_t)                                 \
+        __TINIT_##mode(__VA_ARGS__)
+//---------------------------------------------------------------------------
+#define __stasm_s_rdi(mode,...)                                                 \
+                __stasm_s_##mode(__VA_ARGS__)
+#define __stasm_t_rdi(mode,...)                                                 \
+                __stasm_t_##mode(__VA_ARGS__)
+#define __stasm_l_rdi(mode,...)                                                 \
+                __stasm_l_##mode(__VA_ARGS__)
+#define __stasm_x_rdi(mode,...)                                                 \
+                __stasm_x_##mode(__VA_ARGS__)
+#define __stasm_o_rdi(mode,...)                                                 \
+                __stasm_o_##mode(__VA_ARGS__)
+#define __stasm_i_rdi(mode,...)                                                 \
+                __stasm_i_##mode(__VA_ARGS__)
+#define __stasm_r_rdi(mode,...)                                                 \
+                "rdi",                                                          \
+                __stasm_r_##mode(__VA_ARGS__)
 //---------------------------------------------------------------------------
 __STASM_SHARE_STACK_DEFINE(x64,uint64_t)
 //---------------------------------------------------------------------------
@@ -703,49 +845,49 @@ __STASM_SHARE_STACK_DEFINE(x64,uint64_t)
                 "rax", "rbx", "rcx", "rdx", "rsi", "rdi",                       \
                 __stasm_r_##mode(__VA_ARGS__)
 //---------------------------------------------------------------------------
-__STASM_SHARE_STACK_DEFINE(x64r8,uint64_t)
+__STASM_SHARE_STACK_DEFINE(x64r08,uint64_t)
 //---------------------------------------------------------------------------
-#define __TINIT_x64r8(mode,...)                                                 \
-        __stasm_x64r8_max = __STASM_MAX_PARARELL;                                   \
-        __stasm_x64r8 = __stasm_x64r8_stack[__stasm_x64r8_max];                                   \
-        __STASM_SHARE_STACK_CLEAR(x64r8,uint64_t)                               \
+#define __TINIT_x64r08(mode,...)                                                 \
+        __stasm_x64r08_max = __STASM_MAX_PARARELL;                                   \
+        __stasm_x64r08 = __stasm_x64r08_stack[__stasm_x64r08_max];                                   \
+        __STASM_SHARE_STACK_CLEAR(x64r08,uint64_t)                               \
         __TINIT_##mode(__VA_ARGS__)
-#define __stasm_s_x64r8(mode,...)                                              `\
+#define __stasm_s_x64r08(mode,...)                                              `\
                 __stasm_s_##mode(__VA_ARGS__)
-#define __stasm_t_x64r8(mode,...)                                              `\
+#define __stasm_t_x64r08(mode,...)                                              `\
                 __stasm_t_##mode(__VA_ARGS__)
-#define __stasm_l_x64r8(mode,...)                                              `\
+#define __stasm_l_x64r08(mode,...)                                              `\
                 __stasm_l_##mode(__VA_ARGS__)
-#define __stasm_x_x64r8(mode,...)                                              `\
+#define __stasm_x_x64r08(mode,...)                                              `\
                 __stasm_x_##mode(__VA_ARGS__)
-#define __stasm_o_x64r8(mode,...)                                              `\
+#define __stasm_o_x64r08(mode,...)                                              `\
                 __stasm_o_##mode(__VA_ARGS__)
-#define __stasm_i_x64r8(mode,...)                                              `\
+#define __stasm_i_x64r08(mode,...)                                              `\
                 __stasm_i_##mode(__VA_ARGS__)
-#define __stasm_r_x64r8(mode,...)                                              `\
+#define __stasm_r_x64r08(mode,...)                                              `\
                 "r8lb","r8hb","r8w","r8d","r8",                                `\
                 __stasm_r_##mode(__VA_ARGS__)
 //---------------------------------------------------------------------------
-__STASM_SHARE_STACK_DEFINE(x64r9,uint64_t)
+__STASM_SHARE_STACK_DEFINE(x64r09,uint64_t)
 //---------------------------------------------------------------------------
-#define __TINIT_x64r9(mode,...)                                                 \
-        __stasm_x64r9_max = __STASM_MAX_PARARELL;                                   \
-        __stasm_x64r9 = __stasm_x64r9_stack[__stasm_x64r9_max];                                   \
-        __STASM_SHARE_STACK_CLEAR(x64r9,uint64_t)                               \
+#define __TINIT_x64r09(mode,...)                                                 \
+        __stasm_x64r09_max = __STASM_MAX_PARARELL;                                   \
+        __stasm_x64r09 = __stasm_x64r09_stack[__stasm_x64r09_max];                                   \
+        __STASM_SHARE_STACK_CLEAR(x64r09,uint64_t)                               \
         __TINIT_##mode(__VA_ARGS__)
-#define __stasm_s_x64r9(mode,...)                                               \
+#define __stasm_s_x64r09(mode,...)                                               \
                 __stasm_s_##mode(__VA_ARGS__)
-#define __stasm_t_x64r9(mode,...)                                               \
+#define __stasm_t_x64r09(mode,...)                                               \
                 __stasm_t_##mode(__VA_ARGS__)
-#define __stasm_l_x64r9(mode,...)                                               \
+#define __stasm_l_x64r09(mode,...)                                               \
                 __stasm_l_##mode(__VA_ARGS__)
-#define __stasm_x_x64r9(mode,...)                                               \
+#define __stasm_x_x64r09(mode,...)                                               \
                 __stasm_x_##mode(__VA_ARGS__)
-#define __stasm_o_x64r9(mode,...)                                               \
+#define __stasm_o_x64r09(mode,...)                                               \
                 __stasm_o_##mode(__VA_ARGS__)
-#define __stasm_i_x64r9(mode,...)                                               \
+#define __stasm_i_x64r09(mode,...)                                               \
                 __stasm_i_##mode(__VA_ARGS__)
-#define __stasm_r_x64r9(mode,...)                                               \
+#define __stasm_r_x64r09(mode,...)                                               \
                 "r9lb","r9hb","r9w","r9d","r9",                                 \
                 __stasm_r_##mode(__VA_ARGS__)
 //---------------------------------------------------------------------------
