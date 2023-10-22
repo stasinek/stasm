@@ -1,6 +1,7 @@
 //---------------------------------------------------------------------------
-#ifndef __stk_stasm_h
-#define __stk_stasm_h
+#ifndef __stk_stasm_h__
+#define __stk_stasm_h__
+#pragma once
 //---------------------------------------------------------------------------
 #include "./../stk_main.h"
 //---------------------------------------------------------------------------
@@ -32,7 +33,7 @@
 #ifndef     __STASM_STACK_SIZE
 #if defined(__x86_64__)
      #define __STASM_STACK_SIZE  8 //  8x = 8 bytes 64 bit = 64 bytes a cache line on most x86-64 CPU's
-#else 
+#else
      #define __STASM_STACK_SIZE 16 // 16x = 4 bytes 32 bit = 64 bytes a cache line on most CPUs
 #endif
 #endif
@@ -43,19 +44,12 @@
 
     #if !defined(asm) && !defined(asm_warned)
         #define asm_warned
-        #pragma message("This compiler doesn't support GCC asm(\"\":::) inline asembler, directive ::asm(variable_name) will expand to nothing")
+        #pragma message("NOTE: This compiler doesn't support GCC asm(\"\":::) any inline asembler, directive ::asm(variable_name) will expand to nothing")
     #endif
     #if !defined(__attribute__) && !defined(attribute_warned)
         #define attribute_warned
-        #pragma message("This compiler doesnt support GCC __attribute__() macro, you must use different data packing directives")
+        #pragma message("NOTE: This compiler doesnt support GCC __attribute__() macro, you must use different data packing directives, will expand to nothing")
     #endif
-    // It's possible to direct convert stasm into inline assembler builtin MS, Borland, Pelees C Compiler Collection
-    // Because why to even use STASM then?
-    // So let's do this!
-    #define __stasm(var) __asm { var }
-    #define   stasm(var) __asm { var }
-    // TODO: the only problem then, for direct conversion are codewords passed to stasm macro: "code,save,x86,mmx" so on so forth.. 
-    // But don't worry too much and let all other asm's("") to be converted into nothing
     #ifndef __attribute__
         #define __attribute__(var)
     #endif
@@ -71,11 +65,34 @@
     #ifndef __volatile__
         #define __volatile__(var)
     #endif
+    // It's possible to direct convert stasm into inline assembler builtin MS, Borland, Pelees C Compiler Collection
+    // Because why to even use STASM then?
+    // So let's do this!
+    #define __stasm(var) __asm { var }
+    #define   stasm(var) __asm { var }
+    // TODO: the only problem, for direct conversion are codewords passed to stasm macro: "code,save,x86,mmx" so on so forth..
+    // Those will be missing!
+    // But don't worry too much, got you covered, will let all other asm's("") to be converted into nothing
+    // Borland and MSVC will do conversion of local variables automatically, chances are, all statically created variables will be available in asm {} anyway!
     //---------------------------------------------------------------------------
     // This is what inspired me to make stasm at first place:
     // BTW: VARGS for older C99 compiler are defined here, could be usefull in WATCOM, GCC2(HaikuOS) or Borland compiler.
     // If you use modern MSVC, LLVM, GCC compiler this part is not for you.
-    #if !defined(__BORLANDC__) & !defined(__WATCOMC__)
+    //---------------------------------------------------------------------------
+    /* Borland C++ compiler */
+    #if   defined(__BORLANDC__)
+
+    //---------------------------------------------------------------------------
+    /* OpenWatcom C++ compiler */
+    #elif defined(__WATCOMC__)
+
+    //---------------------------------------------------------------------------
+    /* Microsoft C/C++-compatible compiler */
+    #elif defined(__MSVC__)
+
+    //---------------------------------------------------------------------------
+    /* All other compilers with no __VA_ARGS__ support, lets make this feature anyway */
+    #else
         #define VA_ARGS_EVAL(_1, _2, _3, _4, _5, N, ...) N
         #define VA_ARGS(...) VA_ARGS_EVAL(__VA_ARGS__, 5, 4, 3, 2, 1)
 
@@ -88,18 +105,8 @@
         #define IF_ELVIS_4(__a,__b,__c,__d) if (((a!=NULL ? a.b!= NULL : false) ? a.b.c!=NULL : false) ? a.b.c.d!=NULL : false)
         #define IF_ELVIS_5(__a,__b,__c,__d,__e) if ((((a!=NULL ? a.b!= NULL : false) ? a.b.c!=NULL : false) ? a.b.c.d!=NULL : false) ? a.b.c.d.e!=NULL : false)
     #endif
-    //---------------------------------------------------------------------------
-    /* Borland C++ compiler */
-    #if defined(__BORLANDC__)
-    #endif
-    //---------------------------------------------------------------------------
-    /* OpenWatcom C++ compiler */
-    #if defined(__WATCOMC__)
-    #endif
-    //---------------------------------------------------------------------------
-    /* Microsoft C/C++-compatible compiler */
-    #if defined(__MSVC__)
-    #endif
+// BEGIN, START Here is main part of library, for compilers doesnt not support asm {}
+//
 #elif defined (__GNUC__) || defined(__MINGW__) || defined(__CLANG__) || defined(__llvm__)
 // **************************************************************************
 //
