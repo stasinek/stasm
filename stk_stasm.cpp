@@ -1,8 +1,10 @@
 //---------------------------------------------------------------------------
+// ------ Stanislaw Stasiak = "sstsoft@2001-2015r"---------------------------
+//---------------------------------------------------------------------------
 #include "stk_stasm.h"
 //---------------------------------------------------------------------------
 // Stasm is only for GCC compatible inline asembler
-#if defined( __GNUC__)  | defined(__CLANG__)
+#if defined( __GNUC__)  || defined(__CLANG__)
 //---------------------------------------------------------------------------
 // __STASM_DECLARE_SHARE_STACK Template
 //---------------------------------------------------------------------------
@@ -11,11 +13,12 @@
     data_type  __stasm_##mode_name##_stack[__STASM_MAX_PARARELL+1][__STASM_STACK_SIZE] asm("__stasm_"#mode_name"_stack");		\
     data_type *__stasm_##mode_name asm("__stasm_"#mode_name) = (data_type*)(__stasm_##mode_name##_stack[__stasm_##mode_name##_max]);
 //---------------------------------------------------------------------------
-#if defined(__x86_64__) | defined(__i386__)
+#if defined(__x86_64__) || defined(__i386__)
 // AMD/Intel 32 or 64 bits
 // ^^ We assume x87 is present since 486/Pentium era by default
 #define __X87__
     __STASM_DECLARE_SHARE_STACK(x86,uint32_t)
+//    #error
     __STASM_DECLARE_SHARE_STACK(eax,uint32_t)
     __STASM_DECLARE_SHARE_STACK(ebx,uint32_t)
     __STASM_DECLARE_SHARE_STACK(ecx,uint32_t)
