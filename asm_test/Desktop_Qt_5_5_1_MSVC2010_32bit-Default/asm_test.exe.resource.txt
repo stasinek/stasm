@@ -1,1 +1,0 @@
-1 /* CREATEPROCESS_MANIFEST_RESOURCE_ID */ 24 /* RT_MANIFEST */ "C:/SRC/X86_LIBRARIES/STK/stasm/asm_test/Desktop_Qt_5_5_1_MSVC2010_32bit-Default/asm_test.exe.embed.manifest"
