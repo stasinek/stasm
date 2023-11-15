@@ -286,7 +286,7 @@ message("QMAKE FINISH")
 #FASM.commands = c:/fasm/fasm  ${PWD}${QMAKE_FILE_NAME} ${QMAKE_FILE_OUT}
 #FASM.input = ASM_SOURCES
 #QMAKE_EXTRA_COMPILERS += YASM
-#ASM_SOURCES += 	../STK/cpu/stk_cpu_nasm.asm
+#ASM_SOURCES += ../STK/cpu/stk_cpu_nasm.asm
 
 
 #postlink.target = .buildfile
