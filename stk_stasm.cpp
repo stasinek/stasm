@@ -50,10 +50,14 @@
 //---------------------------------------------------------------------------
 #ifdef __MMX__
     __STASM_DECLARE_SHARE_STACK(mmx,__m64)
-    // We DON'T need to declare FPU state since MMX/FPU shares same thing ^^
-    #if !defined(__X87__)
-    __STASM_STRUCT_FNSAVE __stasm_fnsaved_stack[__STASM_MAX_PARARELL+1] asm("__stasm_fnsaved_stack");
-    #endif
+    // FAKE NEWS: We DON'T need to declare FPU state since MMX/FPU shares same thing ^^
+    // #if !defined(__X87__)
+	// FIXED: Yes we DO! In case user saves both x87 and mmx
+	// State of MMX can be saved either by old fsave or new fxsave SSE CPU, we have decided to use old method
+	// If you want to save SSE either you can do that, MMX will be saved and restored twice but on separate structure 
+	// It uses same small x87 structure but stores it separately
+    __STASM_STRUCT_FNSAVE __stasm_mnsaved_stack[__STASM_MAX_PARARELL+1] asm("__stasm_mnsaved_stack");
+    // #endif
 #endif
 //---------------------------------------------------------------------------
 #ifdef __SSE__

@@ -485,7 +485,7 @@ __STASM_SHARE_STACK_DEFINE(arm,uint32_t)
                          __stasm_save_esi\
                          __stasm_save_edi
 #define __stasm_save_x87 "fsave __stasm_fnsaved_stack\n"
-#define __stasm_save_mmx "fsave __stasm_fnsaved_stack\n"
+#define __stasm_save_mmx "fsave __stasm_mnsaved_stack\n"
 #define __stasm_save_rax "push rax\n"
 #define __stasm_save_rbx "push rbx\n"
 #define __stasm_save_rcx "push rcx\n"
@@ -520,7 +520,7 @@ __STASM_SHARE_STACK_DEFINE(arm,uint32_t)
                          __stasm_load_ebx\
                          __stasm_load_eax
 #define __stasm_load_x87 "frstor __stasm_fnsaved_stack\n"
-#define __stasm_load_mmx "frstor __stasm_fnsaved_stack\n"
+#define __stasm_load_mmx "frstor __stasm_mnsaved_stack\n"
 #define __stasm_load_rax "pop rax\n"
 #define __stasm_load_rbx "pop rbx\n"
 #define __stasm_load_rcx "pop rcx\n"
