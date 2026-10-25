@@ -1,6 +1,10 @@
 # __stasm(...)
 ### The inline assembly wrapper for GCC and Clang C/C++ compiler. Made for human beings.
 
+See BUGS.md for known bugs, this thing worked once, then was broken.
+Requires some files you can find in parent repo: stk such as stk_MAIN.h
+Since 2026 i use Claude to fix all mistakes and bugs. 
+
 Hi, my name is Stanley. First of all, this are my first steps using GitHub(and Git also) and also first steps in C++ since many years. Plus english is not my primary language. So i can't guarantee even the readme to be usefull. 
 
 Actually this easy-peasy macro tool is daily working with MinGW 4.9 and Clang3.7 (windows and linux gcc) can work with any compiler that have simmilar inline asembly syntax as GCC. Just get it import .c file to your project makefile and include .h to any unit you want use asembly then use the macros __stasm() instead asm(""). It's working for targeting all x386, x86-64 processors with all of those MMX,3Dnow, SSE, AVX extensions. Could work with ARM (this was made but wasn't tested). Could work also with any other processor and it need to be adapted exclusivly one by one. This would be done in future.
