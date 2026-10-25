@@ -30,6 +30,7 @@
 // TODO: __STASM_STACK_SIZE AUTO determined to be exacly number of MMX,SSE,SSE2,SSE3,SSE4,AVX registers count on processor
 // It means how many registers my data exchange structure (between GCC and GAS) will fit. Ex. 8 on x86 means 16xEAX's = 64B
 // Or 8xMMX = 64B to be exact one cache line.
+// TODO: To understand why Claude suggested either 32 bit and 64 bit should declare x16 ???
 #ifndef     __STASM_STACK_SIZE
 #if defined(__x86_64__)
      #define __STASM_STACK_SIZE 16 // 16x = 4 bytes 64 bit = 64 bytes a cache line on most x86-64 CPU's
@@ -498,7 +499,7 @@ __STASM_SHARE_STACK_DEFINE(arm,uint32_t)
                          __stasm_save_rdx\
                          __stasm_save_rsi\
                          __stasm_save_rdi\
-                         __stasm_save_x64r8 __stasm_save_x64r9 __stasm_save_x64rxx
+                         __stasm_save_x64r08 __stasm_save_x64r09 __stasm_save_x64rxx
 #define __stasm_save_mmx "fxsave _m_fxsaved\n"
 #define __stasm_save_sse "fxsave _m_fxsaved\n"
 #define __stasm_save_avx "xsave  _m_axsaved\n"
@@ -1002,33 +1003,33 @@ __STASM_SHARE_STACK_DEFINE(mmx,__m64)
 #endif
 //---------------------------------------------------------------------------
 #ifdef __SSE__
-#if !defined(__STASM_DO_NOT_WARN__) & !defined(sse_warned)
-    #define sse_warned
-#warning        "It seems that your CPU has got SSE, make sure to add compiler option  "-msse" then you can use __stasm::sse"
+#if !defined(__STASM_DO_NOT_WARN__) & !defined(sse1_warned)
+    #define sse1_warned
+#warning        "It seems that your CPU has got SSE (Pentium III), make sure to add compiler option  "-msse" then you can use __stasm::sse1"
 #endif
 #include <xmmintrin.h>
 //---------------------------------------------------------------------------
-__STASM_SHARE_STACK_DEFINE(sse,__m128)
+__STASM_SHARE_STACK_DEFINE(sse1,__m128)
 //---------------------------------------------------------------------------
-#define __TINIT_sse(mode,...)                                                   \
-        __stasm_sse_max = __STASM_MAX_PARARELL;                                     \
-        __stasm_sse = __stasm_sse_stack[__stasm_sse_max];                                           \
-        __STASM_SHARE_STACK_CLEAR(sse,__m128)                                   \
+#define __TINIT_sse1(mode,...)                                                   \
+        __stasm_sse1_max = __STASM_MAX_PARARELL;                                     \
+        __stasm_sse1 = __stasm_sse1_stack[__stasm_sse1_max];                                           \
+        __STASM_SHARE_STACK_CLEAR(sse1,__m128)                                   \
         __TINIT_##mode(__VA_ARGS__)
-#define __stasm_s_sse(mode,...)                                                 \
+#define __stasm_s_sse1(mode,...)                                                 \
                 __stasm_s_##mode(__VA_ARGS__)
-#define __stasm_t_sse(mode,...)                                                 \
+#define __stasm_t_sse1(mode,...)                                                 \
                 __stasm_t_##mode(__VA_ARGS__)
-#define __stasm_l_sse(mode,...)                                                 \
+#define __stasm_l_sse1(mode,...)                                                 \
                 __stasm_l_##mode(__VA_ARGS__)
-#define __stasm_x_sse(mode,...)                                                 \
+#define __stasm_x_sse1(mode,...)                                                 \
                 "emms\n"                                                        \
                 __stasm_x_##mode(__VA_ARGS__)
-#define __stasm_o_sse(mode,...)                                                 \
+#define __stasm_o_sse1(mode,...)                                                 \
                 __stasm_o_##mode(__VA_ARGS__)
-#define __stasm_i_sse(mode,...)                                                 \
+#define __stasm_i_sse1(mode,...)                                                 \
                 __stasm_i_##mode(__VA_ARGS__)
-#define __stasm_r_sse(mode,...)                                                 \
+#define __stasm_r_sse1(mode,...)                                                 \
                 "xmm0","xmm1","xmm2","xmm3","xmm4","xmm5","xmm6","xmm7",                                \
                 __stasm_r_##mode(__VA_ARGS__)
 #endif
@@ -1065,13 +1066,13 @@ __STASM_SHARE_STACK_DEFINE(sse2,__m128d)
                 __stasm_r_##mode(__VA_ARGS__)
 #endif
 
-#if defined(__SSE3__) || defined(__SSEE3__)
+#if defined(__SSE3__) || defined(__SSSE3__)
 #if !defined(__STASM_DO_NOT_WARN__) & !defined(sse3_warned)
     #define sse3_warned
     #warning    "It seems that your CPU has got SSE3, make sure to add compiler option "-msse3" then you can use __stasm::sse3"
 #endif
 #include <pmmintrin.h>
-#ifdef __SSEE3__
+#ifdef __SSSE3__
 #include <tmmintrin.h>
 #endif
 //---------------------------------------------------------------------------
@@ -1171,11 +1172,11 @@ __STASM_SHARE_STACK_DEFINE(avx,__m256)
 #define __stasm_i_avx(mode,...)                                                     \
                 __stasm_i_##mode(__VA_ARGS__)
 #if !defined(__x86_64__)
-#define __stasm_r_avx(...)                                                          \
+#define __stasm_r_avx(mode,...)                                                          \
                 "ymm0","ymm1","ymm2","ymm3","ymm4","ymm5","ymm6","ymm7",            \
                 __stasm_r_##mode(__VA_ARGS__)
 #else
-#define __stasm_r_avx(...)                                                          \
+#define __stasm_r_avx(mode,...)                                                          \
                 "ymm0","ymm1","ymm2","ymm3","ymm4","ymm5","ymm6","ymm7",            \
                 "ymm8","ymm9","ymm10","ymm11","ymm12","ymm13","ymm14","ymm15",      \
                 __stasm_r_##mode(__VA_ARGS__)
@@ -1208,28 +1209,35 @@ __STASM_SHARE_STACK_DEFINE(aes,__m256)
                 __stasm_o_##mode(__VA_ARGS__)
 #define __stasm_i_aes(mode,...)                     \
                 __stasm_i_##mode(__VA_ARGS__)
-#define __stasm_r_aes(...)                          \
+#define __stasm_r_aes(mode,...)                          \
                 __stasm_r_##mode(__VA_ARGS__)
 #endif
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
+// TODO: Initialize, fill structures, create __TININT_##mode macros accordingly
 #define __TINIT(mode,...) __TINIT_##mode(__VA_ARGS__)
 //---------------------------------------------------------------------------
+// TODO: Make it acutally atomic and prevent from 2x clashing in infinite wait loops
 #define __TLOCK(mode)                                           \
         while (__stasm_##mode##_max==0) stk::time::wait_us(1);      \
         __stasm_##mode =(__stasm_##mode##_stack[__stasm_##mode##_max--]);
 //---------------------------------------------------------------------------
+// TODO: Make it acutally atomic and prevent from 2x clashing in infinite wait loops
 #define __TUNLOCK(mode)                                         \
         __stasm_##mode =(__stasm_##mode##_stack[++__stasm_##mode##_max]);
 //---------------------------------------------------------------------------
+#define __stasm_init(mode,...)                      \
+        __TINIT(mode)
+
 #define __stasm(mode,...)                           \
+        __TLOCK(mode)                               \
         __asm__ __volatile__(                       \
         __STASM_INLINE_SYNTAX                       \
-         __stasm_s_##mode(__VA_ARGS__) "\n"         \
-         __stasm_t_##mode(__VA_ARGS__) "\n"         \
-         __stasm_l_##mode(__VA_ARGS__) "\n"         \
-         __stasm_x_##mode(__VA_ARGS__) "\n"         \
+        __stasm_s_##mode(__VA_ARGS__) "\n"          \
+        __stasm_t_##mode(__VA_ARGS__) "\n"          \
+        __stasm_l_##mode(__VA_ARGS__) "\n"          \
+        __stasm_x_##mode(__VA_ARGS__) "\n"          \
         __GCC_INLINE_SYNTAX                         \
  :      __stasm_o_##mode(__VA_ARGS__)               \
  :      __stasm_i_##mode(__VA_ARGS__)               \

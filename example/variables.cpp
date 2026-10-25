@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cassert>
 #include <stk_stasm.h>
 
 using namespace std;
@@ -10,7 +11,8 @@ int testfunc(int atest_int1, char *atest_str)
 
 int main(int argc, char** argv)
 {
-	#ifdef __i368__
+    cout << "Hello World!" << endl;
+	#ifdef __i386__
     __stasm_x86[0] = 12; // input data A
     __stasm_x86[1] = 13; // input data, static variable, directly available to __stasm, and protected by atomic lock, unlock!
 
@@ -25,12 +27,10 @@ int main(int argc, char** argv)
     int c_variable0 = __stasm_x86[0];
     int c_variable1 = __stasm_x86[1];
     int c_variable2 = __stasm_x86[2];
-
-
-    cout << "Hello World!" << endl;
     cout << __stasm_x86[0] << "*" << __stasm_x86[1] << "=" << __stasm_x86[2] << endl;
     assert(__stasm_x86[2]==12*13);
     cout << "Success!" << endl;
+	#endif
     return 0;
 }
 
