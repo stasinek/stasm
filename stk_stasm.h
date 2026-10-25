@@ -440,7 +440,7 @@ extern STK_IMPEXP size_t __stasm_stack[__STASM_STACK_SIZE] __attribute__ ((align
 // or even more?
 // Because of stupid GCC inline assembly in WinAPR, Atmel Studio i had never ever wanted to learn ARM
 #define __stasm_save_arm "push ???\n"
-#define __stasm_load_arm "push ???\n"
+#define __stasm_load_arm "pop  ???\n"
 
 __STASM_SHARE_STACK_DEFINE(arm,uint32_t)
 #define __TINIT_ARM(mode,...)                                                   \
@@ -489,8 +489,8 @@ __STASM_SHARE_STACK_DEFINE(arm,uint32_t)
 #define __stasm_save_rdx "push rdx\n"
 #define __stasm_save_rsi "push rsi\n"
 #define __stasm_save_rdi "push rdi\n"
-#define __stasm_save_x64r8 "push r8\n\n"
-#define __stasm_save_x64r9 "push r9\n"
+#define __stasm_save_x64r08 "push r8\n\n"
+#define __stasm_save_x64r09 "push r9\n"
 #define __stasm_save_x64rxx "push r10\n push r11\n push r12\n push r13\n push r14\n push r15\n"
 #define __stasm_save_x64 __stasm_save_rax\
                          __stasm_save_rbx\
@@ -511,12 +511,12 @@ __STASM_SHARE_STACK_DEFINE(arm,uint32_t)
 #define __stasm_load_edx "pop edx\n"
 #define __stasm_load_esi "pop esi\n"
 #define __stasm_load_edi "pop edi\n"
-#define __stasm_load_x86 __stasm_save_edi\
-                         __stasm_save_esi\
-                         __stasm_save_edx\
-                         __stasm_save_ecx\
-                         __stasm_save_ebx\
-                         __stasm_save_eax
+#define __stasm_load_x86 __stasm_load_edi\
+                         __stasm_load_esi\
+                         __stasm_load_edx\
+                         __stasm_load_ecx\
+                         __stasm_load_ebx\
+                         __stasm_load_eax
 #define __stasm_load_x87 "frstor _m_fsaved\n"
 #define __stasm_load_rax "pop rax\n"
 #define __stasm_load_rbx "pop rbx\n"
@@ -524,9 +524,9 @@ __STASM_SHARE_STACK_DEFINE(arm,uint32_t)
 #define __stasm_load_rdx "pop rdx\n"
 #define __stasm_load_rsi "pop rsi\n"
 #define __stasm_load_rdi "pop rdi\n"
-#define __stasm_load_x64r8 "pop r8\n"
-#define __stasm_load_x64r9 "pop r9\n"
-#define __stasm_load_x64rxx "pop r15\n push r14\n push r13\n push r12\n push r11\n push r10\n"
+#define __stasm_load_x64r08 "pop r8\n"
+#define __stasm_load_x64r09 "pop r9\n"
+#define __stasm_load_x64rxx "pop r15\n pop r14\n pop r13\n pop r12\n pop r11\n pop r10\n"
 #define __stasm_load_x64 __stasm_save_x64rxx __stasm_save_x64r9 __stasm_save_x64r8\
                          __stasm_save_rdi\
                          __stasm_save_rsi\
