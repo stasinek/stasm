@@ -242,7 +242,7 @@ union {                                                                         
 };                                                                              \
 uint32_t         MXCR; /* SSE status */                                         \
 uint32_t         MXCR_MASK;                                                     \
-struct __STASM_STRUCT_STX_MMX_SLOT16
+struct __STASM_STRUCT_STX_MMX_SLOT16                                            \
                  ST0,ST1,ST2,ST3,ST4,ST5,ST6,ST7;                               \
 struct __STASM_STRUCT_XMM                                                       \
                  XMM0,XMM1,XMM2,XMM3,XMM4,XMM5,XMM6,XMM7,                       \
@@ -282,13 +282,16 @@ union {
 
 // 2026 Fix, recommended by Claude
 uint8_t RESERVED128[128]; /* 8x16 = 128 bytes unused - reserved by Intel */
-struct __MPX {
-uint64_t BNDREGS[8];  /* 8x8 = 64 bytes, MPX BNDREGS */
-uint64_t BNDCSR[8];   /* 8x8 = 64 bytes, MPX BNDCSR  */
-} MPX;
+struct __MPX_BNDREGS { /* BNDREGS 4x16 bytes 4 x 128 bits each */
+    uint64_t L;  /* 8x8 = lower part 64 bits */
+    uint64_t H;  /* 8x8 = high 64 bits, same as L but bits are inverted (~) */
+} BND[4];
+uint64_t BNDCFGU; /* 1x8 bytes BNDREGS */
+uint64_t BNDSTATUS;   /* 1x8 bytes BNDREGS */
+uint64_t RESERVED48[6];  /* 6x8 = 48 bytes unused - reserved by Intel */
 // OPMASK K0-K7 64bits each
 struct __OPMASK {
-uint64_t K[8];    /* 8x8 = 64 bytes, OPMASK K0 to K7 */
+uint64_t K[8];    /* 8x8 = 64 bytes total, 64 bits each, OPMASK K0 to K7 */
 } OPMASK;
 struct __ZMML {
                 uint8_t BYTE[32]; // 256 bit
@@ -296,12 +299,14 @@ struct __ZMML {
 struct __ZMMH {
                 uint8_t BYTE[64]; // 512 bit
         } __attribute__((packed)) ZMMH[16];
-uint8_t PKRU[8]; /* whatever that crap is 8 bytes */
+uint32_t PKRU[2]; /* whatever that crap is, Protection Keys for User pages 32bit, upper 32 bit reserved  */
+// Check out more on: https://intel.github.io/SDM/instruction/RDPKRU.html
+uint8_t RESERVED56[56]; /* reserved by Intel 56 bytes */
 struct __AMX {
 uint8_t TILECFG[64];	/* 2752–2815 64 bytes */
 uint8_t TILEDATA[8192]; 	/* 2816–11007 8192 bytes*/
 } AMX;
-uint8_t FILLER[1281]; /* filler so the structure is 12x1024 = 12kB aligned */
+uint8_t FILLER[1280]; /* filler so the structure is 12x1024 = 12kB aligned */
 } __attribute__ ((packed, aligned (64))) __stasm_xsave[__STASM_MAX_PARARELL+1];
 //---------------------------------------------------------------------------
 // UNIVERSAL stack for common pointer type
