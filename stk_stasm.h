@@ -28,11 +28,11 @@
 #endif
 //---------------------------------------------------------------------------
 // TODO: __STASM_STACK_SIZE AUTO determined to be exacly number of MMX,SSE,SSE2,SSE3,SSE4,AVX registers count on processor
-// It means how many registers mine data exchange structure (between GCC and GAS) will fit. Ex. 8 on x86 means 16xEAX's = 64B
+// It means how many registers my data exchange structure (between GCC and GAS) will fit. Ex. 8 on x86 means 16xEAX's = 64B
 // Or 8xMMX = 64B to be exact one cache line.
 #ifndef     __STASM_STACK_SIZE
 #if defined(__x86_64__)
-     #define __STASM_STACK_SIZE  8 //  8x = 8 bytes 64 bit = 64 bytes a cache line on most x86-64 CPU's
+     #define __STASM_STACK_SIZE 16 // 16x = 4 bytes 64 bit = 64 bytes a cache line on most x86-64 CPU's
 #else
      #define __STASM_STACK_SIZE 16 // 16x = 4 bytes 32 bit = 64 bytes a cache line on most CPUs
 #endif
@@ -174,31 +174,39 @@ uint16_t FSW; /* Status Word */                                                 
 uint16_t reserved2;                                                             \
 uint16_t FTW; /* TAG Word */                                                    \
 uint16_t reserved3;                                                             \
-union {                                                                         \
-/*64 BIT */                                                                     \
-        struct {                                                                \
-        uint64_t RIP; /* Instruction Pointer */                                 \
-        uint64_t RDP; /* Data Pointer */                                        \
-        };                                                                      \
-/*32 BIT */                                                                     \
-        struct {                                                                \
-        uint32_t FIP; /* IP Offset */                                           \
-        uint16_t FCS; /* IP Selector */                                         \
-        uint16_t FOP; /* Last Opcode */                                         \
-        uint32_t FDP; /* Operand Offset */                                      \
-        uint16_t FDS; /* Operand Selector */                                    \
-        };                                                                      \
-};
+uint32_t FIP; /* IP Offset */                                                   \
+uint16_t FCS; /* IP Selector */                                                 \
+uint16_t FOP; /* Last Opcode, bits 0..10 only */                                \
+uint32_t FDP; /* Operand Offset */                                              \
+uint16_t FDS; /* Operand Selector */                                            \
+uint16_t reserved4;
+// Fix 2026, Claude, union with alternative 64 bit mapping RIP, RDP in 32bit mode was invalid
+// while it is correct for 64 bit FXSAVE not correct for FNSAVE
 //---------------------------------------------------------------------------
 // FPU x87 STK_IMPEXP
 //---------------------------------------------------------------------------
-struct __STASM_STRUCT_STX_MMX {
+// WARNING: Memory layout for how x87, MMX stores data if SSE is present
+// Instad of 10 bytes now CPU stores 16 bytes for each STx register
+// That's probably because of 16 byte align required by SSE
+// Memory structure stored by FXSAVE (SSE) cannot be restored by FNSAVE (x87,MMX only CPU)
+// BUT technically you can store using XSTORE (AVX) and restore using FXSTORE (SSE)
+// Hence we must create two different structures for each of 8 slots!
+
+struct __STASM_STRUCT_STX_MMX_SLOT10 { // Only for FNSAVE (MMX, x87)
     uint64_t VAL;
     uint16_t EXP;
 };
+
+struct __STASM_STRUCT_STX_MMX_SLOT16 { // Only for FXSAVE (SSE, MMX, x87)
+    uint64_t VAL;
+    uint16_t EXP;
+    uint16_t RESERVED1;
+    uint16_t RESERVED2;
+    uint16_t RESERVED3;
+};
 extern STK_IMPEXP struct __STASM_STRUCT_FNSAVE {
 __STASM_TEMPLATE_FNSAVE_X87
-struct __STASM_STRUCT_STX_MMX
+struct __STASM_STRUCT_STX_MMX_SLOT10
                  ST0,ST1,ST2,ST3,ST4,ST5,ST6,ST7;
 } __attribute__((packed,aligned (16))) __stasm_fnsave[__STASM_MAX_PARARELL+1];
 //---------------------------------------------------------------------------
@@ -234,7 +242,7 @@ union {                                                                         
 };                                                                              \
 uint32_t         MXCR; /* SSE status */                                         \
 uint32_t         MXCR_MASK;                                                     \
-struct __STASM_STRUCT_STX_MMX                                                   \
+struct __STASM_STRUCT_STX_MMX_SLOT16
                  ST0,ST1,ST2,ST3,ST4,ST5,ST6,ST7;                               \
 struct __STASM_STRUCT_XMM                                                       \
                  XMM0,XMM1,XMM2,XMM3,XMM4,XMM5,XMM6,XMM7,                       \
@@ -255,7 +263,7 @@ __STASM_TEMPLATE_FXSAVE_SSE
 extern STK_IMPEXP struct __STASM_STRUCT_XSAVE {
 __STASM_TEMPLATE_FXSAVE_SSE
 union {
- uint64_t PAD[64]; /* align 64 */
+ uint64_t PAD[8]; /* align 64 bytes = 8x8 bytes = 8x64bits */
  struct {
         uint64_t XSTATE_BV;
         uint64_t XSTATE_COMP_BV;

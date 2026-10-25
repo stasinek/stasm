@@ -92,3 +92,57 @@ Przyk³ad variables.cpp:
 #ifdef __i368__ to literówka i brakuje #endif, wiêc plik siê nie kompiluje;
 testfunc nie ma return;
 brakuje <cassert>.
+
+
+Przeczyta³em threads/stk_threads.h (tam s¹ ATOMIC, ATOMIC_LOCK i ATOMIC_UNLOCK), time/stk_time.cpp (wait_us) i stk_MAIN.h. Makra skopiowa³em 1:1 do testu: 8 w¹tków po 200 tys. wejœæ do sekcji krytycznej, z licznikiem, ile w¹tków jest w niej naraz.
+
+Jedno sprostowanie na pocz¹tek
+
+User ma niepodzielne compare-and-exchange. To nie s¹ instrukcje uprzywilejowane, dzia³aj¹ w ring 3:
+
+XCHG z pamiêci¹ ma niejawny LOCK (ju¿ na 386);
+LOCK CMPXCHG i LOCK XADD s¹ od 486, LOCK CMPXCHG8B od Pentium;
+dzia³a te¿ prefiks LOCK przy ADD/INC/DEC/OR/AND.
+
+Po stronie kompilatora:
+
+GCC/MinGW ma wbudowane __sync_val_compare_and_swap, __sync_fetch_and_add itd. (od GCC 4.1, bez C++11);
+pod Windows s¹ InterlockedCompareExchange i InterlockedIncrement z WinAPI, wiêc dzia³aj¹ te¿ w BCB i MSVC;
+w duchu stasm mo¿na po prostu napisaæ lock cmpxchg we wstawce.
+
+Masz ju¿ nawet w cpu/stk_cpu.h funkcjê cpu_has_cmpxchg().
+
+Dlaczego unikalny TSC nie chroni, nawet na jednym rdzeniu
+
+rdtsc daje unikalny identyfikator, ale problem nie le¿y w unikalnoœci, tylko w oknie miêdzy sprawdzeniem a zapisem.
+
+Przebieg na jednym rdzeniu:
+
+W¹tek A wychodzi z while (__shared != 0), bo widzi 0. Planista wyw³aszcza go przed __shared = __unique.
+W¹tek B przechodzi ca³y ATOMIC_LOCK: widzi 0, zapisuje swój TSC, mfence, odczyt zgadza siê z jego wartoœci¹. B jest w sekcji.
+A wraca, zapisuje swój TSC (nadpisuje B), mfence, odczyt zgadza siê. A te¿ jest w sekcji.
+Gdy B zrobi ATOMIC_UNLOCK, ustawi 0, chocia¿ A nadal jest w œrodku. Wtedy mo¿e wejœæ trzeci w¹tek.
+
+mfence porz¹dkuje zapisy, ale nie skleja „sprawdŸ i zapisz” w jedn¹ niepodzieln¹ operacjê. Robi to dopiero XCHG/CMPXCHG, bo ca³a operacja jest jedn¹ instrukcj¹.
+
+Wyniki testu (te makra, bez zmian)
+	wszystkie rdzenie	jeden rdzeñ (taskset -c 0)
+maks. w¹tków naraz w sekcji	2–3	2–3
+wejœæ przy zajêtej sekcji	424 tys. – 513 tys.	56 tys. – 723 tys.
+counter++ (oczekiwane 1 600 000)	1 511 135 – 1 551 480	1 600 000
+
+Na jednym rdzeniu licznik wyszed³ poprawny tylko dlatego, ¿e GCC skompilowa³ counter++ do jednej instrukcji add [mem],1. Pojedyncza instrukcja nie zostanie przerwana w po³owie na tym samym rdzeniu. To jest prawdziwe Ÿród³o Twojej intuicji, ale dotyczy jednej instrukcji, a nie kilku linii kodu. Wykluczanie wzajemne i tak by³o z³amane: do 3 w¹tków naraz.
+
+Inne rzeczy w tych makrach
+Ka¿de wywo³anie ATOMIC(n) tworzy osobn¹ zmienn¹ static w danej funkcji. ATOMIC(1) w tsc_start() i ATOMIC(1) w tsc_init() to dwa ró¿ne locki i nie wykluczaj¹ siê nawzajem. Numer num niczego nie ³¹czy.
+W buildzie 32-bitowym volatile int64_t jest zapisywany i czytany dwiema instrukcjami po 32 bity, wiêc inny w¹tek mo¿e zobaczyæ pó³ starej i pó³ nowej wartoœci.
+Rekurencja w funkcji z ATOMIC_LOCK daje samozakleszczenie, bo zmienna jest wspólna dla wszystkich wywo³añ tej funkcji.
+BARIER_ADD ma odwrócony warunek: while(__barier_locker==0). Przy wartoœci pocz¹tkowej 0 (stk_threads.cpp:11) czeka w nieskoñczonoœæ. Na szczêœcie makro nigdzie nie jest u¿ywane.
+wait_us, ga³¹Ÿ nie-Windows, siê nie skompiluje:
+1 000 000 ze spacjami;
+% 100 000 zamiast miliona;
+niedomkniêty nawias w while (nanosleep(&req,&rem);.
+Pod Windows wait_us(0) i wait_us(1) daj¹ Sleep(0), czyli oddanie kwantu czasu, i to dzia³a.
+Powi¹zanie ze stasm
+
+__TLOCK/__TUNLOCK w stasm w ogóle nie u¿ywaj¹ ATOMIC_LOCK. Nie maj¹ nawet tej (dziurawej) ochrony, tylko go³e max--/++max na uint8_t. Opis w commicie stk („shared global (but protected atomic) variables”) odnosi siê wiêc do zamiaru, którego w kodzie stasm nie ma.

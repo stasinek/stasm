@@ -36,7 +36,7 @@ __stasm(
         rdtsc;
 
        tsc_exit:\n
-        mov edi,s_x86;
+        mov edi,__stasm_x86;
         mov [edi+0],eax;
         mov [edi+4],edx;
 )
@@ -99,7 +99,7 @@ Again invalidated by bugzilla guys macro is not as useful and intuitive as could
 Var has no chance working well with GCC without -masm=intel in compiler command line options. All because AT&T %
 But it is working well in Clang inline asm() without passing any additional options to compiler, and it was tested to without problems... I was just like holy-grall for me when i tested it. Asembly just as it should be local variables visible to inline asembler. To get this working in GCC (share data between C code and asm) i have created global variables protected by locking mechanism(for multithreading safety) as temporary feature. It is currently only one used by me for now.
 
-Meantime you should not use var's but use static share "stacks", created automaticly for you as you type x86,x87 options to stasm. Those variables would be named: s_x86, s_x87 created at minimum size of 1 cache line 64 bytes. Also because of that exchanged buffers can be shared by separated stasm block. The type of those variables seen from C code is automatically definied adequate to type of extension you will declare to use: registers 8,16,32 bytes wide. Literally arrays of variables in number of 8,16,32 of them. It's not too much RAM and adequate to common number: 8,16,32 of XMM registers - don't you think?;)
+Meantime you should not use var's but use static share "stacks", created automaticly for you as you type x86,x87 options to stasm. Those variables would be named: __stasm_x86, s_x87 created at minimum size of 1 cache line 64 bytes. Also because of that exchanged buffers can be shared by separated stasm block. The type of those variables seen from C code is automatically definied adequate to type of extension you will declare to use: registers 8,16,32 bytes wide. Literally arrays of variables in number of 8,16,32 of them. It's not too much RAM and adequate to common number: 8,16,32 of XMM registers - don't you think?;)
 
 In actual form macro sucesfully helped me to switch from obsolete Borland C++ 6 inline asm {} into QT Creator + MinGW. Change usles asembly code into C code step by step. Move some code to external .s file compiled as it should be.. This is not ultimate answer just, a easy tool to make GNU GAS human friendly. 
 
@@ -120,17 +120,17 @@ Actually in GCC inline asembly it's copy-pasted by GCC onto the GAS compiler sta
 With globals you could easly write(for weird example):
 
 ~~~{.asm}
-	s_x86[0] = 13; // input my lovely number for test 
+	__stasm_x86[0] = 13; // input my lovely number for test 
 	__stasm(x86,code,
-		mov esi, s_x86;
+		mov esi, __stasm_x86;
 		mov eax,[esi];
 		imul eax,3;
-		mov edi, s_x86;
+		mov edi, __stasm_x86;
 		add edi, 4;
 		mov [edi],eax;
 	);
-	int another_c_variable = s_x86[1];
-	assert(s_x86[1]==3*13);
+	int another_c_variable = __stasm_x86[1];
+	assert(__stasm_x86[1]==3*13);
 ~~~
 
 You may say: Using common GCC inliner the generated could be only 1 liner: imul %1,3; GCC would create mov eax,[ebs-8]; or whatever.. it would be a lot faster and have much more sense. 
