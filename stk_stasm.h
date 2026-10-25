@@ -318,13 +318,14 @@ extern STK_IMPEXP size_t __stasm_stack[__STASM_STACK_SIZE] __attribute__ ((align
 #pragma pack(pop)
 //---------------------------------------------------------------------------
 #define __STASM_SHARE_STACK_CLEAR(mode_name, data_type)                                                 \
-        for (uint32_t __stasm_##mode_name##_thread = 0;__stasm_##mode_name##_thread <=__STASM_MAX_PARARELL;__stasm_##mode_name##_t++)     \
-        for (uint32_t __stasm_##mode_name##_i = 0;__stasm_##mode_name##_i < __STASM_STACK_SIZE;  __stasm_##mode_name##_c++)     \
+        for (uint32_t __stasm_##mode_name##_thread = 0;__stasm_##mode_name##_thread <=__STASM_MAX_PARARELL;__stasm_##mode_name##_thread++)     \
+        for (uint32_t __stasm_##mode_name##_i = 0;__stasm_##mode_name##_i < __STASM_STACK_SIZE;  __stasm_##mode_name##_i++)     \
              __stasm_##mode_name##_stack[__stasm_##mode_name##_thread][__stasm_##mode_name##_i] = 0;
 //---------------------------------------------------------------------------
 #define __STASM_SHARE_STACK_DEFINE(mode_name, data_type)                                                \
-        extern uint8_t        __stasm_##mode_name##_max asm("__stasm_"#mode_name"_max");                    \
-        extern data_type     *__stasm_##mode_name asm("__stasm_"#mode_name);                                \
+		extern volatile uint32_t __stasm_##mode_name##_lock asm("__stasm_"#mode_name"_lock"); 			\
+        extern uint32_t       __stasm_##mode_name##_max asm("__stasm_"#mode_name"_max");                \
+        extern data_type     *__stasm_##mode_name asm("__stasm_"#mode_name);                            \
         extern data_type     (__stasm_##mode_name##_stack)[__STASM_MAX_PARARELL+1][__STASM_STACK_SIZE] asm("__stasm_"#mode_name"_stack") __attribute__ ((aligned (sizeof(data_type))));
 //---------------------------------------------------------------------------
 // For __stdcall, __cdecl, __fastcall for naked C functions: the "code" trigger word, must be defined before "save"!
@@ -483,7 +484,8 @@ __STASM_SHARE_STACK_DEFINE(arm,uint32_t)
                          __stasm_save_edx\
                          __stasm_save_esi\
                          __stasm_save_edi
-#define __stasm_save_x87 "fsave _m_fsaved\n"
+#define __stasm_save_x87 "fsave __stasm_fnsaved_stack\n"
+#define __stasm_save_mmx "fsave __stasm_fnsaved_stack\n"
 #define __stasm_save_rax "push rax\n"
 #define __stasm_save_rbx "push rbx\n"
 #define __stasm_save_rcx "push rcx\n"
@@ -500,9 +502,8 @@ __STASM_SHARE_STACK_DEFINE(arm,uint32_t)
                          __stasm_save_rsi\
                          __stasm_save_rdi\
                          __stasm_save_x64r08 __stasm_save_x64r09 __stasm_save_x64rxx
-#define __stasm_save_mmx "fxsave _m_fxsaved\n"
-#define __stasm_save_sse "fxsave _m_fxsaved\n"
-#define __stasm_save_avx "xsave  _m_axsaved\n"
+#define __stasm_save_sse "fxsave __stasm_fxsaved_stack\n"
+#define __stasm_save_avx " xsave __stasm_axsaved_stack\n"
 
 // **********//***********
 
@@ -518,7 +519,8 @@ __STASM_SHARE_STACK_DEFINE(arm,uint32_t)
                          __stasm_load_ecx\
                          __stasm_load_ebx\
                          __stasm_load_eax
-#define __stasm_load_x87 "frstor _m_fsaved\n"
+#define __stasm_load_x87 "frstor __stasm_fnsaved_stack\n"
+#define __stasm_load_mmx "frstor __stasm_fnsaved_stack\n"
 #define __stasm_load_rax "pop rax\n"
 #define __stasm_load_rbx "pop rbx\n"
 #define __stasm_load_rcx "pop rcx\n"
@@ -528,21 +530,20 @@ __STASM_SHARE_STACK_DEFINE(arm,uint32_t)
 #define __stasm_load_x64r08 "pop r8\n"
 #define __stasm_load_x64r09 "pop r9\n"
 #define __stasm_load_x64rxx "pop r15\n pop r14\n pop r13\n pop r12\n pop r11\n pop r10\n"
-#define __stasm_load_x64 __stasm_save_x64rxx __stasm_save_x64r9 __stasm_save_x64r8\
-                         __stasm_save_rdi\
-                         __stasm_save_rsi\
-                         __stasm_save_rdx\
-                         __stasm_save_rcx\
-                         __stasm_save_rbx\
-                         __stasm_save_rax
-#define __stasm_load_mmx "fxrstor _m_fxsaved\n"
-#define __stasm_load_sse "fxrstor _m_fxsaved\n"
-#define __stasm_load_avx "xrstor  _m_axsaved\n"
+#define __stasm_load_x64 __stasm_load_x64rxx __stasm_load_x64r09 __stasm_load_x64r08\
+                         __stasm_load_rdi\
+                         __stasm_load_rsi\
+                         __stasm_load_rdx\
+                         __stasm_load_rcx\
+                         __stasm_load_rbx\
+                         __stasm_load_rax
+#define __stasm_load_sse "fxrstor __stasm_fxsaved_stack\n"
+#define __stasm_load_avx " xrstor __stasm_axsaved_stack\n"
 //---------------------------------------------------------------------------
 __STASM_SHARE_STACK_DEFINE(x86,uint32_t)
 #define __TINIT_x86(mode,...)                                                   \
-        __stasm_x86_max = __STASM_MAX_PARARELL;                                     \
-        __stasm_x86 = __stasm_x86_stack[__stasm_x86_max];                                         \
+        __stasm_x86_max = __STASM_MAX_PARARELL;                                 \
+        __stasm_x86 = __stasm_x86_stack[__stasm_x86_max];                       \
         __STASM_SHARE_STACK_CLEAR(x86,uint32_t)                                 \
         __TINIT_##mode(__VA_ARGS__)
 //---------------------------------------------------------------------------
@@ -874,8 +875,8 @@ __STASM_SHARE_STACK_DEFINE(rdi,uint64_t)
 __STASM_SHARE_STACK_DEFINE(x64,uint64_t)
 //---------------------------------------------------------------------------
 #define __TINIT_x64(mode,...)                                                   \
-        __stasm_x64 = __STASM_MAX_PARARELL;                                         \
-        __stasm_x64 = __stasm_x64_stack[__stasm_x64_max];                                         \
+        __stasm_x64_max = __STASM_MAX_PARARELL;                                 \
+        __stasm_x64 = __stasm_x64_stack[__stasm_x64_max];                       \
         __STASM_SHARE_STACK_CLEAR(x64,uint64_t)                                 \
         __TINIT_##mode(__VA_ARGS__)
 //---------------------------------------------------------------------------
@@ -898,8 +899,8 @@ __STASM_SHARE_STACK_DEFINE(x64,uint64_t)
 __STASM_SHARE_STACK_DEFINE(x64r08,uint64_t)
 //---------------------------------------------------------------------------
 #define __TINIT_x64r08(mode,...)                                                 \
-        __stasm_x64r08_max = __STASM_MAX_PARARELL;                                   \
-        __stasm_x64r08 = __stasm_x64r08_stack[__stasm_x64r08_max];                                   \
+        __stasm_x64r08_max = __STASM_MAX_PARARELL;                               \
+        __stasm_x64r08 = __stasm_x64r08_stack[__stasm_x64r08_max];               \
         __STASM_SHARE_STACK_CLEAR(x64r08,uint64_t)                               \
         __TINIT_##mode(__VA_ARGS__)
 #define __stasm_s_x64r08(mode,...)                                              `\
@@ -915,14 +916,14 @@ __STASM_SHARE_STACK_DEFINE(x64r08,uint64_t)
 #define __stasm_i_x64r08(mode,...)                                              `\
                 __stasm_i_##mode(__VA_ARGS__)
 #define __stasm_r_x64r08(mode,...)                                              `\
-                "r8lb","r8hb","r8w","r8d","r8",                                `\
+                "r8",                                `							 \
                 __stasm_r_##mode(__VA_ARGS__)
 //---------------------------------------------------------------------------
 __STASM_SHARE_STACK_DEFINE(x64r09,uint64_t)
 //---------------------------------------------------------------------------
 #define __TINIT_x64r09(mode,...)                                                 \
-        __stasm_x64r09_max = __STASM_MAX_PARARELL;                                   \
-        __stasm_x64r09 = __stasm_x64r09_stack[__stasm_x64r09_max];                                   \
+        __stasm_x64r09_max = __STASM_MAX_PARARELL;                               \
+        __stasm_x64r09 = __stasm_x64r09_stack[__stasm_x64r09_max];               \
         __STASM_SHARE_STACK_CLEAR(x64r09,uint64_t)                               \
         __TINIT_##mode(__VA_ARGS__)
 #define __stasm_s_x64r09(mode,...)                                               \
@@ -938,14 +939,14 @@ __STASM_SHARE_STACK_DEFINE(x64r09,uint64_t)
 #define __stasm_i_x64r09(mode,...)                                               \
                 __stasm_i_##mode(__VA_ARGS__)
 #define __stasm_r_x64r09(mode,...)                                               \
-                "r9lb","r9hb","r9w","r9d","r9",                                 \
+                "r9",                                  							 \
                 __stasm_r_##mode(__VA_ARGS__)
 //---------------------------------------------------------------------------
 __STASM_SHARE_STACK_DEFINE(x64rxx,uint64_t)
 //---------------------------------------------------------------------------
 #define __TINIT_x64rxx(mode,...)                                                \
-        __stasm_x64rxx_max = __STASM_MAX_PARARELL;                                  \
-        __stasm_x64rxx = __stasm_x64rx_stack[__stasm_x64xx_max];                                    \
+        __stasm_x64rxx_max = __STASM_MAX_PARARELL;                              \
+        __stasm_x64rxx = __stasm_x64rx_stack[__stasm_x64xx_max];                \
         __STASM_SHARE_STACK_CLEAR(x64rxx,uint64_t)                              \
         __TINIT_##mode(__VA_ARGS__)
 #define __stasm_s_x64rxx(mode,...)                                              \
@@ -980,8 +981,8 @@ __STASM_SHARE_STACK_DEFINE(x64rxx,uint64_t)
 __STASM_SHARE_STACK_DEFINE(mmx,__m64)
 //---------------------------------------------------------------------------
 #define __TINIT_mmx(mode,...)                                                   \
-        __stasm_mmx_max = __STASM_MAX_PARARELL;                                     \
-        __stasm_mmx = __stasm_mmx_stack[__stasm_mmx_max];                                         \
+        __stasm_mmx_max = __STASM_MAX_PARARELL;                                 \
+        __stasm_mmx = __stasm_mmx_stack[__stasm_mmx_max];                       \
         __STASM_SHARE_STACK_CLEAR(mmx,__m64)                                    \
         __TINIT_##mode(__VA_ARGS__)
 #define __stasm_s_mmx(mode,...)                                                 \
@@ -1101,14 +1102,14 @@ __STASM_SHARE_STACK_DEFINE(sse3,__m128i)
                 __stasm_r_##mode(__VA_ARGS__)
 #endif
 
-#if defined(__SSE4A__) || defined(__SSE41__) || defined(__SSE42__)
+#if defined(__SSE4A__) || defined(__SSE4_1__) || defined(__SSE4_2__)
 #ifdef __SSE4A__
 #include <ammintrin.h>
 #endif
-#ifdef __SSE41__
+#ifdef __SSE4_1__
 #include <smmintrin.h>
 #endif
-#ifdef __SSE42__
+#ifdef __SSE4_2__
 #include <nmmintrin.h>
 #endif
 //---------------------------------------------------------------------------
@@ -1215,21 +1216,43 @@ __STASM_SHARE_STACK_DEFINE(aes,__m256)
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-// TODO: Initialize, fill structures, create __TININT_##mode macros accordingly
-#define __TINIT(mode,...) __TINIT_##mode(__VA_ARGS__)
 //---------------------------------------------------------------------------
-// TODO: Make it acutally atomic and prevent from 2x clashing in infinite wait loops
-#define __TLOCK(mode)                                           \
-        while (__stasm_##mode##_max==0) stk::time::wait_us(1);      \
-        __stasm_##mode =(__stasm_##mode##_stack[__stasm_##mode##_max--]);
+// TRUE ATOMIC made by Claude 2026.10.25
+// XCHG reg,mem jest niepodzielne z niejawnym LOCK (od 386), działa w ring 3.
+// XCHG jest symetryczne, więc "xchg %0, %1" działa i w AT&T, i przy -masm=intel.
+#define __TLOCK(mode)                                                           \
+do {                                                                            \
+    uint32_t __stasm_tl_val;                                                    \
+    uint32_t __stasm_tl_spin = 0;                                               \
+    for (;;) {                                                                  \
+        __stasm_tl_val = 1;                                                     \
+        __asm__ __volatile__("xchg %0, %1"                                      \
+            : "+r" (__stasm_tl_val), "+m" (__stasm_##mode##_lock)               \
+            : : "memory");                                                      \
+        if (__stasm_tl_val == 0) break;         /* bylo 0: blokada nasza */     \
+        while (__stasm_##mode##_lock != 0) {    /* czekaj bez LOCK na szynie */ \
+            __asm__ __volatile__("pause");                                      \
+            if (++__stasm_tl_spin > 1000) {     /* oddaj kwant czasu */         \
+                __stasm_tl_spin = 0;                                            \
+                stk::time::wait_us(0);                                          \
+            }                                                                   \
+        }                                                                       \
+    }                                                                           \
+} while (0);
 //---------------------------------------------------------------------------
-// TODO: Make it acutally atomic and prevent from 2x clashing in infinite wait loops
-#define __TUNLOCK(mode)                                         \
-        __stasm_##mode =(__stasm_##mode##_stack[++__stasm_##mode##_max]);
+#define __TUNLOCK(mode)                                                         \
+do {                                                                            \
+    uint32_t __stasm_tl_val = 0;                                                \
+    __asm__ __volatile__("xchg %0, %1"                                          \
+        : "+r" (__stasm_tl_val), "+m" (__stasm_##mode##_lock)                   \
+        : : "memory");                                                          \
+} while (0);
 //---------------------------------------------------------------------------
-#define __stasm_init(mode,...)                      \
-        __TINIT(mode)
-
+//
+//  Main macros every user of this library should focus on:
+//  Here is place where you can add some logging some things for debugging 
+//
+//---------------------------------------------------------------------------
 #define __stasm(mode,...)                           \
         __TLOCK(mode)                               \
         __asm__ __volatile__(                       \
@@ -1242,7 +1265,9 @@ __STASM_SHARE_STACK_DEFINE(aes,__m256)
  :      __stasm_o_##mode(__VA_ARGS__)               \
  :      __stasm_i_##mode(__VA_ARGS__)               \
  :      __stasm_r_##mode(__VA_ARGS__)               \
-        );
+        );											\
+        __TUNLOCK(mode)                               
+		
 //---------------------------------------------------------------------------
 #define __stasmex(mode,...)                         \
         __asm__ __volatile__(__STASM_INLINE_SYNTAX  \

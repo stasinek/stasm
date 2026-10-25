@@ -9,8 +9,9 @@
 //---------------------------------------------------------------------------
 // __STASM_DECLARE_SHARE_STACK Template
 //---------------------------------------------------------------------------
-#define __STASM_DECLARE_SHARE_STACK(mode_name,data_type)                                            \
-    uint32_t   __stasm_##mode_name##_max asm("__stasm_"#mode_name"_max") =__STASM_MAX_PARARELL;                \
+#define __STASM_DECLARE_SHARE_STACK(mode_name,data_type)                                            							\
+	volatile uint32_t __stasm_##mode_name##_lock asm("__stasm_"#mode_name"_lock") = 0; 											\
+    uint32_t   __stasm_##mode_name##_max asm("__stasm_"#mode_name"_max") =__STASM_MAX_PARARELL;                					\
     data_type  __stasm_##mode_name##_stack[__STASM_MAX_PARARELL+1][__STASM_STACK_SIZE] asm("__stasm_"#mode_name"_stack");		\
     data_type *__stasm_##mode_name asm("__stasm_"#mode_name) = (data_type*)(__stasm_##mode_name##_stack[__stasm_##mode_name##_max]);
 //---------------------------------------------------------------------------
