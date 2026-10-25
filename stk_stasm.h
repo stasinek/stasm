@@ -126,6 +126,19 @@ extern int __stdcall _asm(const char *, ...);
 #endif
 #if defined(__x86_64__)
           /* GCC-compatible compiler, targeting x86/x86-64 */
+
+//<mmintrin.h>  MMX
+//<xmmintrin.h> SSE
+//<emmintrin.h> SSE2
+//<pmmintrin.h> SSE3
+//<tmmintrin.h> SSSE3
+//<smmintrin.h> SSE4.1
+//<nmmintrin.h> SSE4.2
+//<ammintrin.h> SSE4A
+//<wmmintrin.h> AES
+//<immintrin.h> AVX, AVX2, FMA
+//<zmmintrin.h> for AVX512.
+
 #endif
 #if defined(__ARM_NEON__)
           /* GCC-compatible compiler, targeting ARM with NEON */

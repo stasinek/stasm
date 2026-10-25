@@ -2,6 +2,7 @@
 // ------ Stanislaw Stasiak = "sstsoft@2001-2015r"---------------------------
 //---------------------------------------------------------------------------
 #include "stk_stasm.h"
+//.intel_syntax
 //---------------------------------------------------------------------------
 // Stasm is only for GCC compatible inline asembler
 #if defined( __GNUC__)  || defined(__CLANG__)

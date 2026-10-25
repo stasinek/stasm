@@ -3,10 +3,17 @@
 
 using namespace std;
 
-int main()
+int testfunc(int atest_int1, char *atest_str)
 {
+// TODO: recurrence call this unction over and over again, for example sorting ANSI character
+}
+
+int main(int argc, char** argv)
+{
+	#ifdef __i368__
     __stasm_x86[0] = 12; // input data A
     __stasm_x86[1] = 13; // input data, static variable, directly available to __stasm, and protected by atomic lock, unlock!
+
     __stasm(x86,code,
         mov esi, __stasm_x86;
         mov eax,[esi+0];
@@ -15,7 +22,10 @@ int main()
         mov edi, __stasm_x86;
         mov [edi+8],eax;
     );
-    int another_c_variable = __stasm_x86[2];
+    int c_variable0 = __stasm_x86[0];
+    int c_variable1 = __stasm_x86[1];
+    int c_variable2 = __stasm_x86[2];
+
 
     cout << "Hello World!" << endl;
     cout << __stasm_x86[0] << "*" << __stasm_x86[1] << "=" << __stasm_x86[2] << endl;
