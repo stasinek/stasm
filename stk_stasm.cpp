@@ -23,7 +23,7 @@
 // AMD/Intel 32 or 64 bits
 // ^^ We assume x87 is present since 486/Pentium era by default
 #define __X87__
-    __STASM_DECLARE_SHARE_STACK(arm,uint32_t)
+    __STASM_DECLARE_SHARE_STACK(x86,uint32_t)
 //    #error
     __STASM_DECLARE_SHARE_STACK(eax,uint32_t)
     __STASM_DECLARE_SHARE_STACK(ebx,uint32_t)
